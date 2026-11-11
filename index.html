@@ -168,6 +168,12 @@
     border:1px solid #c7d2fe; background:#eef2ff; color:#4338ca;
   }
   .todaybtn:hover{background:#e0e7ff}
+  .clearbtn{
+    font:inherit; font-size:13px; font-weight:700; cursor:pointer;
+    padding:5px 11px; border-radius:8px;
+    border:1px solid var(--chrome-line); background:transparent; color:var(--ink-muted);
+  }
+  .clearbtn:hover{border-color:#f3c0c0; color:#b91c1c}
   .emptybar{
     display:flex; align-items:center; gap:12px; flex-wrap:wrap;
     margin-top:22px; padding:12px 16px;
@@ -211,6 +217,11 @@
     border:2px dashed var(--empty-line);
   }
   .cell.neutral{background:var(--neutral-bg); color:var(--ink); font-weight:700}
+  /* Ingen har tagit ställning än */
+  .cell.unset{
+    background:transparent; color:var(--empty-line);
+    border:2px dashed var(--empty-line); font-weight:700;
+  }
   button.cell{cursor:pointer}
   button.cell:hover{filter:brightness(.97)}
 
@@ -236,21 +247,68 @@
   }
   .cell.note.blank:focus::before{content:""}
 
-  /* narrow / phone layout */
+  /* ---------- stående läge ---------- */
   .daycard{
-    border:1px solid var(--chrome-line); border-radius:14px;
-    padding:14px; margin-bottom:12px;
+    border:1px solid var(--chrome-line); border-radius:12px;
+    padding:10px 12px 11px; margin-bottom:9px;
   }
   .daycard h3{
-    margin:0 0 10px; font-size:13px; font-weight:700;
-    letter-spacing:.09em; text-transform:uppercase; color:var(--ink-muted);
+    margin:0 0 7px; font-size:12px; font-weight:700;
+    letter-spacing:.07em; text-transform:uppercase; color:var(--ink-muted);
   }
   .daycard h3 .ddate{color:var(--ink)}
-  .daycard .line{
-    display:grid; grid-template-columns:104px 1fr; gap:10px;
-    align-items:center; margin-bottom:8px;
+
+  .nrow{
+    display:grid; grid-template-columns:62px 1fr; gap:8px;
+    align-items:center; margin-bottom:5px;
   }
-  .daycard .line > span{font-size:14px; font-weight:700}
+  .nlabel{
+    font-size:11px; font-weight:700; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--ink-muted);
+  }
+  .nbools{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:7px}
+  .nbool{display:grid; grid-template-columns:1fr 58px; gap:6px; align-items:center}
+  .nnotes{margin-top:7px; display:flex; flex-direction:column; gap:5px}
+
+  /* Kompakta rutor: en rad istället för två, mindre höjd */
+  .daycard .cell{
+    min-height:0; padding:7px 10px; border-radius:9px;
+    flex-direction:row; align-items:baseline; justify-content:center; gap:7px;
+  }
+  .daycard .cell .name{font-size:16px}
+  .daycard .cell .time-line{font-size:13px}
+  .daycard .cell.bool{font-size:14px; padding:6px 8px}
+  .daycard .cell.note{
+    flex-direction:column; align-items:flex-start; text-align:left;
+    padding:8px 10px; font-size:13px; min-height:0;
+  }
+  .daycard .cell.note.blank::before{font-size:12px}
+
+  .instructions-short{display:none}
+
+  @media (max-width:700px){
+    .instructions{display:none}        /* den långa texten tar två rader på mobil */
+    .instructions-short{display:inline}
+    .paper-wrap{padding:12px 10px 0}
+    .paper{padding:18px 14px 22px; border-radius:12px}
+    .doc-title{font-size:26px}
+    .doc-sub{font-size:14px; margin-top:4px}
+    .doc-head{gap:10px}
+    .weekwrap{align-items:flex-start}
+    .weekfield{padding:7px 13px}
+    .weekfield .num{font-size:22px}
+    .grid{margin-top:16px}
+    .daycard{padding:9px 11px 10px; margin-bottom:8px}
+    .daycard .cell{padding:6px 9px}
+    .nrow{margin-bottom:4px}
+    .nbools, .nnotes{margin-top:6px}
+  }
+
+  /* Vem som ändrade veckan, och när */
+  .changed{
+    margin-top:14px; text-align:right;
+    font-size:11px; color:var(--ink-muted);
+  }
 
   /* ---------- print ---------- */
   @page{size:A4 landscape; margin:11mm}
@@ -307,7 +365,8 @@
   <span class="hint" id="share-msg" aria-live="polite"></span>
   <span class="hint sync-pill" id="sync-msg" aria-live="polite"></span>
   <div class="spacer"></div>
-  <span class="hint">Klicka på ett namn för att byta person · på Ja/Nej för att växla · på tiden eller veckonumret för att ändra</span>
+  <span class="hint instructions">Klicka på ett namn för att byta person · på Ja/Nej för att växla · på tiden eller veckonumret för att ändra</span>
+  <span class="hint instructions-short">Tryck på en ruta för att ändra</span>
 </div>
 
 <div class="settings no-print" id="settings">
@@ -324,6 +383,12 @@
   <p class="sub">Namn och färg för den som lämnar och hämtar.</p>
   <div id="people"></div>
   <button class="btn" id="add-person" style="margin-top:6px">+ Lägg till person</button>
+
+  <h2 style="margin-top:20px">Den här enheten</h2>
+  <p class="sub">Dina initialer, så den andra ser vem som ändrat veckan. Sparas bara här, inte i det delade schemat.</p>
+  <div class="person-row">
+    <input type="text" id="set-me" class="wide" maxlength="3" placeholder="t.ex. C" style="max-width:120px">
+  </div>
 
   <h2 style="margin-top:22px">Gemensamt schema</h2>
   <p class="sub" id="shared-sub"></p>
@@ -413,11 +478,12 @@
     return year + "-" + (week < 10 ? "0" + week : "" + week);
   }
 
+  // morning och fritids har tre lägen: null (ingen har tagit ställning), true, false
   function emptyDay(){
     return {
-      morning:false,
+      morning:null,
       drop:{person:null, time:""},
-      fritids:false,
+      fritids:null,
       pickup:{person:null, time:""},
       note:"", note2:""
     };
@@ -428,7 +494,7 @@
   }
 
   function isDayEmpty(d){
-    return !d.morning && !d.fritids && !d.note && !d.note2 &&
+    return d.morning == null && d.fritids == null && !d.note && !d.note2 &&
            !(d.drop && (d.drop.person || d.drop.time)) &&
            !(d.pickup && (d.pickup.person || d.pickup.time));
   }
@@ -455,6 +521,60 @@
     Object.keys(state.weeks).forEach(function(k){
       if(isWeekEmpty(state.weeks[k])) delete state.weeks[k];
     });
+    if(state.changes){
+      Object.keys(state.changes).forEach(function(k){
+        if(!state.weeks[k]) delete state.changes[k];
+      });
+    }
+  }
+
+  /* ---------- vem som ändrade, och när ---------- */
+  // Initialerna är personliga och sparas bara på den här enheten.
+  // Själva stämpeln följer med schemat, så den andra ser vem som rört veckan.
+
+  var ME_KEY = "veckoschema.me";
+
+  function me(){
+    try{ return (localStorage.getItem(ME_KEY) || "").trim().slice(0, 3); }
+    catch(e){ return ""; }
+  }
+
+  function touchWeek(){
+    if(!state.changes) state.changes = {};
+    state.changes[weekKey(state.week, state.year)] = {
+      by: me(),
+      at: new Date().toISOString()
+    };
+  }
+
+  function formatStamp(iso){
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return "";
+    var hhmm = ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
+    var now = new Date();
+    var yesterday = new Date(now.getTime());
+    yesterday.setDate(now.getDate() - 1);
+    if(d.toDateString() === now.toDateString())       return "idag " + hhmm;
+    if(d.toDateString() === yesterday.toDateString()) return "igår " + hhmm;
+    return d.getDate() + " " + MONTHS[d.getMonth()] + " " + hhmm;
+  }
+
+  function changeLine(){
+    var c = (state.changes || {})[weekKey(state.week, state.year)];
+    if(!c || !c.at) return null;
+    var when = formatStamp(c.at);
+    if(!when) return null;
+    return el("div", "changed", "Ändrad " + when + (c.by ? " av " + c.by : ""));
+  }
+
+  function clearWeek(){
+    var k = weekKey(state.week, state.year);
+    if(!state.weeks[k]) return;
+    if(!window.confirm("Är du säker? Hela vecka " + state.week + " rensas och det går inte att ångra.")) return;
+    delete state.weeks[k];
+    if(state.changes) delete state.changes[k];
+    save();
+    render();
   }
 
   function weeksFromNow(){
@@ -506,6 +626,8 @@
     var now = currentWeek();
     if(typeof s.week !== "number" || s.week < 1 || s.week > 53) s.week = now.week;
     if(typeof s.year !== "number" || s.year < 2000 || s.year > 2100) s.year = now.year;
+
+    if(!s.changes || typeof s.changes !== "object") s.changes = {};
 
     if(!s.weeks || typeof s.weeks !== "object"){
       s.weeks = {};
@@ -747,13 +869,24 @@
 
   /* ---------- cell builders ---------- */
 
+  // tomt -> Ja -> Nej -> tomt
+  function nextBool(v){
+    if(v === true)  return false;
+    if(v === false) return null;
+    return true;
+  }
+
   function buildBool(dayIndex, rowKey){
-    var on = !!daysForRender()[dayIndex][rowKey];
-    var b = el("button", "cell bool " + (on ? "neutral" : "empty"), on ? "Ja" : "Nej");
+    var v = daysForRender()[dayIndex][rowKey];
+    var decided = (v === true || v === false);
+    var b = el("button",
+               "cell bool " + (decided ? "neutral" : "unset"),
+               decided ? (v ? "Ja" : "Nej") : "–");
     b.type = "button";
+    b.title = "Klicka för att växla mellan tomt, Ja och Nej";
     b.addEventListener("click", function(){
-      var d = daysForEdit()[dayIndex];
-      d[rowKey] = !d[rowKey];
+      daysForEdit()[dayIndex][rowKey] = nextBool(v);
+      touchWeek();
       save();
       render();
     });
@@ -774,6 +907,7 @@
         person: nextPersonId(slot.person),
         time: slot.time || ""
       };
+      touchWeek();
       save();
       render();
     });
@@ -789,6 +923,7 @@
       var v = time.textContent.trim();
       if(v === (slot.time || "")) return;    // inget ändrat – rör inte det delade schemat
       daysForEdit()[dayIndex][rowKey] = {person: slot.person, time: v};
+      touchWeek();
       save();
     });
     time.addEventListener("keydown", function(ev){
@@ -815,6 +950,7 @@
       var v = cell.textContent.trim();
       if(v === text) return;
       daysForEdit()[dayIndex][rowKey] = v;
+      touchWeek();
       save();
       render();
     });
@@ -874,6 +1010,7 @@
     var source = state.weeks[weekKey(prev.week, prev.year)];
     if(!source) return;
     state.weeks[weekKey(state.week, state.year)] = JSON.parse(JSON.stringify(source));
+    touchWeek();
     save();
     render();
   }
@@ -941,16 +1078,27 @@
     row.appendChild(next);
     wrap.appendChild(row);
 
-    // Visa var man är, och en väg tillbaka, bara när man bläddrat bort
+    var tools = el("div", "weeknote no-print");
+
+    // Var man är, och vägen tillbaka – bara när man bläddrat bort
     if(offset !== 0){
-      var note = el("div", "weeknote no-print");
-      note.appendChild(el("span", null, relativeWeekLabel()));
+      tools.appendChild(el("span", null, relativeWeekLabel()));
       var back = el("button", "todaybtn", "Denna vecka");
       back.type = "button";
       back.addEventListener("click", goToCurrentWeek);
-      note.appendChild(back);
-      wrap.appendChild(note);
+      tools.appendChild(back);
     }
+
+    // Rensa bara när det finns något att rensa
+    if(state.weeks[weekKey(state.week, state.year)]){
+      var clr = el("button", "clearbtn", "Rensa veckan");
+      clr.type = "button";
+      clr.title = "Tömmer hela veckan";
+      clr.addEventListener("click", clearWeek);
+      tools.appendChild(clr);
+    }
+
+    if(tools.childNodes.length) wrap.appendChild(tools);
 
     head.appendChild(wrap);
     return head;
@@ -974,22 +1122,42 @@
     return grid;
   }
 
+  // Stående läge: ett kompakt kort per dag. Lämna och Hämta på var sin rad,
+  // de två fritidsvalen sida vid sida, och noteringsraden alltid synlig så
+  // den går att fylla i här också.
   function renderNarrow(){
     var days = daysForRender();
     var wrap = el("div", "grid");
+
     DAYS.forEach(function(day, i){
       var card = el("div", "daycard");
+
       var h3 = el("h3");
       h3.appendChild(document.createTextNode(day + " "));
       h3.appendChild(el("span", "ddate", formatDate(dateForDay(i))));
       card.appendChild(h3);
-      ROWS.forEach(function(row){
-        if(row.type === "note" && !days[i][row.key]) return;
-        var line = el("div", "line");
-        line.appendChild(el("span", null, row.label || "Notering"));
-        line.appendChild(buildCell(i, row));
-        card.appendChild(line);
+
+      [["drop","Lämna"], ["pickup","Hämta"]].forEach(function(p){
+        var row = el("div", "nrow");
+        row.appendChild(el("span", "nlabel", p[1]));
+        row.appendChild(buildPerson(i, p[0]));
+        card.appendChild(row);
       });
+
+      var bools = el("div", "nbools");
+      [["morning","Morgon"], ["fritids","Fritids"]].forEach(function(p){
+        var cellWrap = el("div", "nbool");
+        cellWrap.appendChild(el("span", "nlabel", p[1]));
+        cellWrap.appendChild(buildBool(i, p[0]));
+        bools.appendChild(cellWrap);
+      });
+      card.appendChild(bools);
+
+      var notes = el("div", "nnotes");
+      notes.appendChild(buildNote(i, "note"));
+      if(days[i].note || days[i].note2) notes.appendChild(buildNote(i, "note2"));
+      card.appendChild(notes);
+
       wrap.appendChild(card);
     });
     return wrap;
@@ -1013,6 +1181,9 @@
 
     var narrow = !forceWide && window.matchMedia("(max-width: 700px)").matches;
     paper.appendChild(narrow ? renderNarrow() : renderWide());
+
+    var stamp = changeLine();
+    if(stamp) paper.appendChild(stamp);
   }
 
   /* ---------- settings panel ---------- */
@@ -1171,6 +1342,12 @@
   });
   document.getElementById("set-sub").addEventListener("input", function(e){
     state.subtitle = e.target.value; save(); render();
+  });
+
+  var meInput = document.getElementById("set-me");
+  try{ meInput.value = localStorage.getItem(ME_KEY) || ""; }catch(e){}
+  meInput.addEventListener("input", function(){
+    try{ localStorage.setItem(ME_KEY, meInput.value.trim().slice(0, 3)); }catch(e){}
   });
 
   document.getElementById("add-person").addEventListener("click", function(){

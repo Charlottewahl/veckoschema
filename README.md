@@ -9,7 +9,8 @@ Dubbelklicka på `index.html`. Det är hela appen — en enda fil, inget att ins
 fungerar utan internet.
 
 - **Klicka på ett namn** för att byta person (Mamma → Pappa → tomt → Mamma …)
-- **Klicka på Ja/Nej** för att växla morgonfritids och fritids
+- **Klicka på fritidsrutan** för att växla tomt → Ja → Nej → tomt. En vecka ingen rört
+  står tom, så den inte ser ut att påstå "nej" till fritids
 - **Klicka på tiden** för att skriva en ny tid
 - **Klicka på veckonumret eller året** för att ändra vecka
 - **Pilarna ‹ ›** hoppar en vecka fram eller tillbaka
@@ -31,8 +32,26 @@ bort du är ("nästa vecka", "om 2 veckor"). Knappen **Denna vecka** tar dig til
 På en tom vecka finns också **Kopiera förra veckan**, om rutinen är ungefär densamma
 och du bara vill ändra en detalj.
 
+**Rensa veckan** tömmer hela den vecka du står på, efter en bekräftelsefråga.
+
 Veckor du inte rört tar ingen plats, och tömmer du en vecka försvinner den igen.
 Vilken vecka du tittar på är personligt — bläddrar du framåt flyttas inte den andras vy.
+
+## Vem ändrade, och när
+
+Under schemat står en liten rad: *Ändrad idag 17:20 av C*. Initialerna anger du under
+**Inställningar → Den här enheten**. De sparas bara på din enhet, medan själva stämpeln
+följer med schemat, så den andra ser vem som rört veckan. Lämnar du fältet tomt visas
+bara tidpunkten.
+
+Stämpeln gäller per vecka, och den följer med på utskriften så man ser hur färsk
+en utskriven lapp är.
+
+## På skärm och på papper
+
+Stående läge, på mobil och platta, visar ett kompakt kort per dag — det är läget som
+är gjort för att överblicka. Liggande läge med hela veckorutnätet används på större
+skärmar och är det som skrivs ut, oavsett vilken enhet du skriver ut från.
 
 Allt sparas automatiskt i webbläsaren på den enhet du använder. Inget skickas någonstans.
 
