@@ -76,6 +76,18 @@ personerna.
 "+ notering"-texter försvinner. Skriver du ut från mobilen får du ändå hela
 veckorutnätet, inte dagkorten.
 
+## Skicka som bild
+
+**Bild** gör veckan till en PNG i liggande format och i färg — även när du står i
+stående läge på en telefon.
+
+På mobil öppnas delningsrutan direkt, så bilden går att skicka i vilken app som helst.
+På dator laddas den ner som `veckoschema-v46-2026.png`.
+
+Bilden ritas upp från grunden på en canvas, inte som en skärmdump av sidan. Därför ser
+den likadan ut i alla webbläsare, och den landar på ungefär 180 kB — liten nog att
+skicka i en chatt. Den visar den vecka du står på, med lediga dagar och noteringar.
+
 ## Dela
 
 Det finns två sätt. Båda kräver att sidan ligger på en webbadress — öppnar du filen
