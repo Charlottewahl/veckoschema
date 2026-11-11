@@ -188,7 +188,7 @@
   .emptybar button:hover{border-color:var(--ink-muted)}
 
   .grid{display:grid; gap:10px; margin-top:30px}
-  .grid.wide{grid-template-columns:minmax(92px,150px) repeat(5,minmax(0,1fr))}
+  .grid.wide{grid-template-columns:minmax(56px,84px) repeat(5,minmax(0,1fr))}
 
   .dayhead{text-align:center; align-self:end; padding-bottom:4px}
   .dayhead .dname{
@@ -201,9 +201,25 @@
   }
   .rowlabel{
     display:flex; align-items:center;
-    font-size:15px; font-weight:700; color:var(--ink);
+    font-size:14px; font-weight:700; color:var(--ink);
+    line-height:1.2; overflow-wrap:break-word;
+    -webkit-hyphens:auto; hyphens:auto;
   }
   .rowlabel.for-note{align-items:flex-start; padding-top:13px}
+
+  /* Ledig: bockrutan i dagrubriken, och blocket den ger */
+  .ledigbox{
+    display:inline-flex; align-items:center; gap:5px; margin-top:6px;
+    font-size:11px; font-weight:600; color:var(--ink-muted);
+    letter-spacing:0; text-transform:none; cursor:pointer;
+  }
+  .ledigbox input{margin:0; cursor:pointer}
+  .cell.ledig{
+    background:#eef2ff; color:#4338ca;
+    align-items:center; justify-content:center;
+    font-size:clamp(17px,2.2vw,28px); font-weight:800; letter-spacing:.03em;
+  }
+  .daycard .cell.ledig{font-size:16px; padding:11px; justify-content:center}
 
   .cell{
     display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -255,8 +271,10 @@
   .daycard h3{
     margin:0 0 7px; font-size:12px; font-weight:700;
     letter-spacing:.07em; text-transform:uppercase; color:var(--ink-muted);
+    display:flex; align-items:center; gap:7px; flex-wrap:wrap;
   }
   .daycard h3 .ddate{color:var(--ink)}
+  .daycard h3 .ledigbox{margin-top:0; margin-left:auto}
 
   .nrow{
     display:grid; grid-template-columns:62px 1fr; gap:8px;
@@ -333,9 +351,11 @@
     .cell, .cell.tinted, .cell.neutral, .cell.note{
       -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
+    .grid.wide{grid-template-columns:minmax(46px,64px) repeat(5,minmax(0,1fr))}
     .dayhead .dname{font-size:9pt}
     .dayhead .ddate{font-size:10pt}
-    .rowlabel{font-size:12pt}
+    .rowlabel{font-size:11pt}
+    .cell.ledig{font-size:20pt}
     .cell .name{font-size:18pt}
     .cell .time-line{font-size:11pt}
     .cell.bool{font-size:18pt}
@@ -422,8 +442,9 @@
   };
   var TONE_KEYS = Object.keys(TONES);
 
+  // ­ är ett mjukt bindestreck: syns bara när ordet måste brytas
   var ROWS = [
-    {key:"morning", label:"Morgonfritids", type:"bool"},
+    {key:"morning", label:"Morgon­fritids", type:"bool"},
     {key:"drop",    label:"Lämna",         type:"person"},
     {key:"fritids", label:"Fritids",       type:"bool"},
     {key:"pickup",  label:"Hämta",         type:"person"},
@@ -481,6 +502,7 @@
   // morning och fritids har tre lägen: null (ingen har tagit ställning), true, false
   function emptyDay(){
     return {
+      ledig:false,
       morning:null,
       drop:{person:null, time:""},
       fritids:null,
@@ -494,7 +516,7 @@
   }
 
   function isDayEmpty(d){
-    return d.morning == null && d.fritids == null && !d.note && !d.note2 &&
+    return !d.ledig && d.morning == null && d.fritids == null && !d.note && !d.note2 &&
            !(d.drop && (d.drop.person || d.drop.time)) &&
            !(d.pickup && (d.pickup.person || d.pickup.time));
   }
@@ -641,6 +663,7 @@
       var days = s.weeks[k];
       if(!Array.isArray(days) || days.length !== 5){ delete s.weeks[k]; return; }
       days.forEach(function(day){
+        day.ledig = !!day.ledig;
         NOTE_KEYS.forEach(function(n){
           if(typeof day[n] !== "string") day[n] = "";
         });
@@ -957,6 +980,33 @@
     return cell;
   }
 
+  // Ledig tömmer skola och fritids för dagen. Noteringar får stå kvar –
+  // det är ofta där man skriver vad man gör istället.
+  function setLedig(dayIndex, on){
+    var d = daysForEdit()[dayIndex];
+    d.ledig = !!on;
+    if(on){
+      d.morning = null;
+      d.fritids = null;
+      d.drop    = {person:null, time:""};
+      d.pickup  = {person:null, time:""};
+    }
+    touchWeek();
+    save();
+    render();
+  }
+
+  function ledigToggle(dayIndex){
+    var lbl = el("label", "ledigbox no-print");
+    var cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = !!daysForRender()[dayIndex].ledig;
+    cb.addEventListener("change", function(){ setLedig(dayIndex, cb.checked); });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode("Ledig"));
+    return lbl;
+  }
+
   function buildCell(dayIndex, row){
     if(row.type === "bool")   return buildBool(dayIndex, row.key);
     if(row.type === "person") return buildPerson(dayIndex, row.key);
@@ -1106,19 +1156,51 @@
 
   /* ---------- layouts ---------- */
 
+  // Rutnätet placeras ruta för ruta, så en ledig dag kan bli ett enda block
+  // som spänner över de fyra schemaraderna. Noteringsraderna står kvar.
+  var SCHEDULE_ROWS = 4;                               // morgon, lämna, fritids, hämta
+
   function renderWide(){
+    var days = daysForRender();
     var grid = el("div", "grid wide");
-    grid.appendChild(el("div"));                       // empty corner
+
+    function place(node, gridRow, gridCol){
+      node.style.gridRow = gridRow;
+      node.style.gridColumn = gridCol;
+      grid.appendChild(node);
+    }
+
+    place(el("div"), "1", "1");                        // tomma hörnet
+
     DAYS.forEach(function(day, i){
       var head = el("div", "dayhead");
       head.appendChild(el("span", "dname", day));
       head.appendChild(el("span", "ddate", formatDate(dateForDay(i))));
-      grid.appendChild(head);
+      head.appendChild(ledigToggle(i));
+      place(head, "1", String(i + 2));
     });
-    ROWS.forEach(function(row){
-      grid.appendChild(el("div", "rowlabel" + (row.type === "note" ? " for-note" : ""), row.label));
-      for(var i=0;i<5;i++) grid.appendChild(buildCell(i, row));
+
+    ROWS.forEach(function(row, r){
+      var label = el("div", "rowlabel" + (row.type === "note" ? " for-note" : ""), row.label);
+      place(label, String(r + 2), "1");
     });
+
+    DAYS.forEach(function(day, i){
+      var col = String(i + 2);
+
+      if(days[i].ledig){
+        place(el("div", "cell ledig", "Ledig"), "2 / span " + SCHEDULE_ROWS, col);
+      }else{
+        ROWS.slice(0, SCHEDULE_ROWS).forEach(function(row, r){
+          place(buildCell(i, row), String(r + 2), col);
+        });
+      }
+
+      ROWS.slice(SCHEDULE_ROWS).forEach(function(row, r){
+        place(buildCell(i, row), String(r + 2 + SCHEDULE_ROWS), col);
+      });
+    });
+
     return grid;
   }
 
@@ -1135,23 +1217,28 @@
       var h3 = el("h3");
       h3.appendChild(document.createTextNode(day + " "));
       h3.appendChild(el("span", "ddate", formatDate(dateForDay(i))));
+      h3.appendChild(ledigToggle(i));
       card.appendChild(h3);
 
-      [["drop","Lämna"], ["pickup","Hämta"]].forEach(function(p){
-        var row = el("div", "nrow");
-        row.appendChild(el("span", "nlabel", p[1]));
-        row.appendChild(buildPerson(i, p[0]));
-        card.appendChild(row);
-      });
+      if(days[i].ledig){
+        card.appendChild(el("div", "cell ledig", "Ledig"));
+      }else{
+        [["drop","Lämna"], ["pickup","Hämta"]].forEach(function(p){
+          var row = el("div", "nrow");
+          row.appendChild(el("span", "nlabel", p[1]));
+          row.appendChild(buildPerson(i, p[0]));
+          card.appendChild(row);
+        });
 
-      var bools = el("div", "nbools");
-      [["morning","Morgon"], ["fritids","Fritids"]].forEach(function(p){
-        var cellWrap = el("div", "nbool");
-        cellWrap.appendChild(el("span", "nlabel", p[1]));
-        cellWrap.appendChild(buildBool(i, p[0]));
-        bools.appendChild(cellWrap);
-      });
-      card.appendChild(bools);
+        var bools = el("div", "nbools");
+        [["morning","Morgon"], ["fritids","Fritids"]].forEach(function(p){
+          var cellWrap = el("div", "nbool");
+          cellWrap.appendChild(el("span", "nlabel", p[1]));
+          cellWrap.appendChild(buildBool(i, p[0]));
+          bools.appendChild(cellWrap);
+        });
+        card.appendChild(bools);
+      }
 
       var notes = el("div", "nnotes");
       notes.appendChild(buildNote(i, "note"));

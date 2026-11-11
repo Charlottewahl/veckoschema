@@ -34,6 +34,18 @@ och du bara vill ändra en detalj.
 
 **Rensa veckan** tömmer hela den vecka du står på, efter en bekräftelsefråga.
 
+## Lediga dagar
+
+Varje dag har en bockruta **Ledig**. Bockar du i den försvinner lämning, hämtning,
+morgonfritids och fritids för den dagen, och i liggande läge ersätts hela dagens
+kolumn av ett stort **Ledig**-block.
+
+Noteringarna står kvar, så du kan skriva dit vad som gäller istället — "hos farmor",
+"åker till stugan".
+
+Observera att i-bockningen **raderar** dagens tider. Bockar du ur rutan igen kommer de
+inte tillbaka, dagen blir tom.
+
 Veckor du inte rört tar ingen plats, och tömmer du en vecka försvinner den igen.
 Vilken vecka du tittar på är personligt — bläddrar du framåt flyttas inte den andras vy.
 
