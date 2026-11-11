@@ -1,0 +1,1039 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veckoschema</title>
+<style>
+  :root{
+    --page-bg:#f4f5f7;
+    --chrome-fg:#1f2430;
+    --chrome-muted:#6b7280;
+    --chrome-line:#dfe2e8;
+    --chrome-card:#ffffff;
+    --accent:#2563eb;
+
+    --paper:#ffffff;
+    --ink:#111827;
+    --ink-muted:#6b7280;
+    --empty-line:#cfd4dc;
+    --neutral-bg:#f1f2f4;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --page-bg:#15171c;
+      --chrome-fg:#e8eaf0;
+      --chrome-muted:#9aa1ae;
+      --chrome-line:#2c313b;
+      --chrome-card:#1d2026;
+      --accent:#60a5fa;
+    }
+  }
+  :root[data-theme="dark"]{
+    --page-bg:#15171c;
+    --chrome-fg:#e8eaf0;
+    --chrome-muted:#9aa1ae;
+    --chrome-line:#2c313b;
+    --chrome-card:#1d2026;
+    --accent:#60a5fa;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--page-bg);
+    color:var(--chrome-fg);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:0 0 64px;
+  }
+
+  /* ---------- toolbar ---------- */
+  .toolbar{
+    position:sticky; top:0; z-index:20;
+    display:flex; flex-wrap:wrap; gap:8px; align-items:center;
+    padding:10px 16px;
+    background:var(--chrome-card);
+    border-bottom:1px solid var(--chrome-line);
+  }
+  .toolbar .spacer{flex:1}
+  .btn{
+    font:inherit; font-size:14px; font-weight:600;
+    color:var(--chrome-fg); background:var(--chrome-card);
+    border:1px solid var(--chrome-line); border-radius:9px;
+    padding:8px 13px; cursor:pointer; white-space:nowrap;
+  }
+  .btn:hover{border-color:var(--chrome-muted)}
+  .btn.primary{background:var(--accent); border-color:transparent; color:#fff}
+  .btn.primary:hover{filter:brightness(.94)}
+  .hint{font-size:13px; color:var(--chrome-muted)}
+  .sync-pill:not(:empty){
+    padding:4px 10px; border-radius:999px;
+    background:var(--neutral-bg); color:var(--chrome-fg); font-weight:600;
+  }
+  .sync-pill.warn:not(:empty){background:#fef3c7; color:#92400e}
+  .linkrow{display:flex; gap:8px; align-items:center; margin-bottom:8px}
+  .linkrow input{
+    flex:1; font:inherit; font-size:13px; padding:7px 10px;
+    border:1px solid var(--chrome-line); border-radius:8px;
+    background:var(--page-bg); color:var(--chrome-fg); min-width:0;
+  }
+
+  /* ---------- settings ---------- */
+  .settings{
+    display:none; margin:0 16px; padding:16px;
+    background:var(--chrome-card); border:1px solid var(--chrome-line);
+    border-radius:12px;
+  }
+  .settings.open{display:block}
+  .settings h2{margin:0 0 4px; font-size:15px}
+  .settings .sub{margin:0 0 14px; font-size:13px; color:var(--chrome-muted)}
+  .person-row{display:flex; gap:8px; align-items:center; margin-bottom:8px}
+  .person-row input[type=text], .settings input.wide{
+    font:inherit; font-size:14px; padding:7px 10px;
+    border:1px solid var(--chrome-line); border-radius:8px;
+    background:var(--page-bg); color:var(--chrome-fg); min-width:0;
+  }
+  .person-row input[type=text]{flex:1}
+  .swatches{display:flex; gap:5px}
+  .swatch{
+    width:24px; height:24px; border-radius:7px; cursor:pointer;
+    border:2px solid transparent; background:var(--bg);
+  }
+  .swatch[aria-pressed="true"]{border-color:var(--chrome-fg)}
+  .icon-btn{
+    font:inherit; font-size:15px; line-height:1; cursor:pointer;
+    width:30px; height:30px; border-radius:8px;
+    border:1px solid var(--chrome-line); background:transparent; color:var(--chrome-muted);
+  }
+  .icon-btn:hover{color:#b91c1c; border-color:#f3c0c0}
+
+  /* ---------- paper ---------- */
+  .paper-wrap{padding:20px 16px 0; display:flex; justify-content:center}
+  .paper{
+    width:100%; max-width:1180px;
+    background:var(--paper); color:var(--ink);
+    border:1px solid var(--chrome-line); border-radius:16px;
+    padding:36px 36px 40px;
+    box-shadow:0 1px 3px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.05);
+  }
+
+  .doc-head{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:20px; flex-wrap:wrap;
+  }
+  .doc-title{
+    margin:0; font-size:clamp(28px,4.2vw,44px); font-weight:800;
+    letter-spacing:-.02em; line-height:1.1; outline:none;
+  }
+  .doc-sub{
+    margin:8px 0 0; font-size:clamp(14px,1.6vw,18px);
+    color:var(--ink-muted); outline:none;
+  }
+
+  .weekbox{display:flex; align-items:center; gap:6px}
+  .step{
+    font:inherit; font-size:19px; line-height:1; cursor:pointer;
+    width:34px; height:34px; border-radius:10px;
+    border:1px solid var(--empty-line); background:transparent; color:var(--ink-muted);
+  }
+  .step:hover{color:var(--ink); border-color:var(--ink-muted)}
+  .weekfield{
+    display:flex; align-items:baseline; gap:9px;
+    padding:9px 16px; border-radius:12px; background:var(--neutral-bg);
+  }
+  .weekfield .lbl{
+    font-size:12px; font-weight:700; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--ink-muted);
+  }
+  .weekfield .num{
+    font-size:26px; font-weight:800; color:var(--ink);
+    outline:none; min-width:1.3em; text-align:center;
+  }
+  .weekfield .yr{
+    font-size:15px; font-weight:700; color:var(--ink-muted);
+    outline:none; min-width:2.6em; text-align:center;
+  }
+
+  .grid{display:grid; gap:10px; margin-top:30px}
+  .grid.wide{grid-template-columns:minmax(92px,150px) repeat(5,minmax(0,1fr))}
+
+  .dayhead{text-align:center; align-self:end; padding-bottom:4px}
+  .dayhead .dname{
+    display:block; font-size:13px; font-weight:600;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--ink-muted);
+  }
+  .dayhead .ddate{
+    display:block; margin-top:3px; font-size:13px;
+    font-weight:700; color:var(--ink);
+  }
+  .rowlabel{
+    display:flex; align-items:center;
+    font-size:15px; font-weight:700; color:var(--ink);
+  }
+  .rowlabel.for-note{align-items:flex-start; padding-top:13px}
+
+  .cell{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px; min-height:74px; padding:10px 8px;
+    border-radius:11px; text-align:center;
+    font:inherit; border:0; width:100%;
+  }
+  .cell.tinted{background:var(--bg); color:var(--fg)}
+  .cell.empty{
+    background:transparent; color:var(--ink-muted);
+    border:2px dashed var(--empty-line);
+  }
+  .cell.neutral{background:var(--neutral-bg); color:var(--ink); font-weight:700}
+  button.cell{cursor:pointer}
+  button.cell:hover{filter:brightness(.97)}
+
+  .cell .name{
+    font:inherit; font-size:clamp(15px,1.7vw,21px); font-weight:800;
+    background:none; border:0; padding:0; color:inherit; cursor:pointer;
+  }
+  .cell .time-line{font-size:clamp(12px,1.3vw,15px); font-weight:600; opacity:.95}
+  .cell .time{outline:none; min-width:8px; display:inline-block}
+  .cell .time:empty::before{content:"––"; opacity:.5}
+  .cell.bool{font-size:clamp(15px,1.7vw,21px); font-weight:700}
+
+  .cell.note{
+    min-height:52px; padding:11px 13px;
+    align-items:flex-start; justify-content:flex-start; text-align:left;
+    background:#fff4e6; color:#b45309; font-size:clamp(13px,1.4vw,16px);
+    font-weight:600; line-height:1.4; outline:none;
+  }
+  .cell.note.blank{background:transparent; border:2px dashed transparent}
+  .cell.note.blank:hover{border-color:var(--empty-line)}
+  .cell.note.blank::before{
+    content:"+ notering"; color:var(--empty-line); font-weight:600;
+  }
+  .cell.note.blank:focus::before{content:""}
+
+  /* narrow / phone layout */
+  .daycard{
+    border:1px solid var(--chrome-line); border-radius:14px;
+    padding:14px; margin-bottom:12px;
+  }
+  .daycard h3{
+    margin:0 0 10px; font-size:13px; font-weight:700;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--ink-muted);
+  }
+  .daycard h3 .ddate{color:var(--ink)}
+  .daycard .line{
+    display:grid; grid-template-columns:104px 1fr; gap:10px;
+    align-items:center; margin-bottom:8px;
+  }
+  .daycard .line > span{font-size:14px; font-weight:700}
+
+  /* ---------- print ---------- */
+  @page{size:A4 landscape; margin:11mm}
+  @media print{
+    .no-print{display:none !important}
+    body{background:#fff; padding:0}
+    .paper-wrap{padding:0}
+    .paper{
+      max-width:none; border:0; border-radius:0;
+      box-shadow:none; padding:0;
+    }
+    .doc-title{font-size:32pt}
+    .doc-sub{font-size:12pt; margin-top:3pt}
+    .weekfield{padding:5pt 11pt; border-radius:6pt}
+    .weekfield .lbl{font-size:9pt}
+    .weekfield .num{font-size:21pt}
+    .weekfield .yr{font-size:12pt}
+    .grid{margin-top:16pt; gap:6pt}
+    .cell{min-height:56pt; border-radius:8pt}
+    .cell.note{min-height:30pt; padding:7pt 9pt}
+    .cell.note.blank::before{content:""}
+    .cell, .cell.tinted, .cell.neutral, .cell.note{
+      -webkit-print-color-adjust:exact; print-color-adjust:exact;
+    }
+    .dayhead .dname{font-size:9pt}
+    .dayhead .ddate{font-size:10pt}
+    .rowlabel{font-size:12pt}
+    .cell .name{font-size:18pt}
+    .cell .time-line{font-size:11pt}
+    .cell.bool{font-size:18pt}
+    .cell.note{font-size:10pt}
+  }
+</style>
+
+<!--
+  === Gemensamt schema ===
+  Fyll i de två raderna nedan för att kunna dela ett schema som ni båda redigerar
+  samtidigt. Du hämtar värdena från ditt Supabase-projekt. Se SETUP.md för exakta steg.
+  Lämnar du dem tomma fungerar allt annat precis som vanligt, bara utan delning.
+-->
+<script>
+  window.SCHEMA_SYNC = {
+    url:     "https://qafirrlvhkizzhbubzse.supabase.co",
+    anonKey: "sb_publishable_iasZDjRTHC-n_FfuRUGWpQ_vd_WU6Fc"
+  };
+</script>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <button class="btn primary" id="print">Skriv ut</button>
+  <button class="btn" id="toggle-settings">Inställningar</button>
+  <button class="btn" id="share">Dela</button>
+  <span class="hint" id="share-msg" aria-live="polite"></span>
+  <span class="hint sync-pill" id="sync-msg" aria-live="polite"></span>
+  <div class="spacer"></div>
+  <span class="hint">Klicka på ett namn för att byta person · på Ja/Nej för att växla · på tiden eller veckonumret för att ändra</span>
+</div>
+
+<div class="settings no-print" id="settings">
+  <h2>Rubrik</h2>
+  <p class="sub">Visas överst på utskriften.</p>
+  <div class="person-row">
+    <input type="text" id="set-title" class="wide" placeholder="Hampus vecka">
+  </div>
+  <div class="person-row">
+    <input type="text" id="set-sub" class="wide" placeholder="Vem lämnar, vem hämtar och när det är fritids">
+  </div>
+
+  <h2 style="margin-top:20px">Personer</h2>
+  <p class="sub">Namn och färg för den som lämnar och hämtar.</p>
+  <div id="people"></div>
+  <button class="btn" id="add-person" style="margin-top:6px">+ Lägg till person</button>
+
+  <h2 style="margin-top:22px">Gemensamt schema</h2>
+  <p class="sub" id="shared-sub"></p>
+  <div id="shared-area"></div>
+
+  <h2 style="margin-top:22px">Schemat</h2>
+  <p class="sub">Allt sparas automatiskt i den här webbläsaren.</p>
+  <button class="btn" id="reset">Återställ till exempel</button>
+</div>
+
+<div class="paper-wrap">
+  <div class="paper" id="paper"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "veckoschema.v1";
+
+  var DAYS = ["Måndag","Tisdag","Onsdag","Torsdag","Fredag"];
+  var MONTHS = ["jan","feb","mars","apr","maj","juni","juli","aug","sep","okt","nov","dec"];
+
+  var TONES = {
+    blue:   {bg:"#dbeafe", fg:"#1d4ed8"},
+    rose:   {bg:"#fce7ea", fg:"#be123c"},
+    green:  {bg:"#dcfce7", fg:"#15803d"},
+    violet: {bg:"#ede9fe", fg:"#6d28d9"},
+    teal:   {bg:"#ccfbf1", fg:"#0f766e"},
+    amber:  {bg:"#fef3c7", fg:"#b45309"}
+  };
+  var TONE_KEYS = Object.keys(TONES);
+
+  var ROWS = [
+    {key:"morning", label:"Morgonfritids", type:"bool"},
+    {key:"drop",    label:"Lämna",         type:"person"},
+    {key:"fritids", label:"Fritids",       type:"bool"},
+    {key:"pickup",  label:"Hämta",         type:"person"},
+    {key:"note",    label:"Notering",      type:"note"},
+    {key:"note2",   label:"",              type:"note"}
+  ];
+  var NOTE_KEYS = ["note","note2"];
+
+  /* ---------- ISO week helpers ---------- */
+
+  // Monday of a given ISO week, as a UTC date.
+  function mondayOfISOWeek(week, year){
+    var jan4 = new Date(Date.UTC(year, 0, 4));
+    var dow = jan4.getUTCDay() || 7;            // Monday = 1 … Sunday = 7
+    var monday = new Date(jan4);
+    monday.setUTCDate(jan4.getUTCDate() - dow + 1 + (week - 1) * 7);
+    return monday;
+  }
+
+  // ISO week + ISO week-year for a UTC date.
+  function isoWeekOf(date){
+    var t = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    var dow = t.getUTCDay() || 7;
+    t.setUTCDate(t.getUTCDate() + 4 - dow);     // Thursday decides the week-year
+    var yearStart = Date.UTC(t.getUTCFullYear(), 0, 1);
+    var week = Math.ceil(((t - yearStart) / 86400000 + 1) / 7);
+    return {week: week, year: t.getUTCFullYear()};
+  }
+
+  function currentWeek(){
+    var now = new Date();
+    return isoWeekOf(new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())));
+  }
+
+  function dateForDay(dayIndex){
+    var monday = mondayOfISOWeek(state.week, state.year);
+    monday.setUTCDate(monday.getUTCDate() + dayIndex);
+    return monday;
+  }
+
+  function formatDate(d){
+    return d.getUTCDate() + " " + MONTHS[d.getUTCMonth()];
+  }
+
+  /* ---------- state ---------- */
+
+  function defaultState(){
+    var now = currentWeek();
+    return {
+      title: "Hampus vecka",
+      subtitle: "Vem lämnar, vem hämtar och när det är fritids",
+      week: now.week,
+      year: now.year,
+      people: [
+        {id:"mamma", name:"Mamma", tone:"rose"},
+        {id:"pappa", name:"Pappa", tone:"blue"}
+      ],
+      days: [
+        {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.30"}, note:"", note2:""},
+        {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"Inte idrott – Hampus ska vara i klassrummet med Eva-Marie", note2:""},
+        {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
+        {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
+        {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.00"}, note:"", note2:""}
+      ]
+    };
+  }
+
+  // Fills in anything an older saved schedule is missing.
+  function migrate(s){
+    var now = currentWeek();
+    if(typeof s.week !== "number" || s.week < 1 || s.week > 53) s.week = now.week;
+    if(typeof s.year !== "number" || s.year < 2000 || s.year > 2100) s.year = now.year;
+    s.days.forEach(function(day){
+      NOTE_KEYS.forEach(function(k){
+        if(typeof day[k] !== "string") day[k] = "";
+      });
+    });
+    return s;
+  }
+
+  /* ---------- share links ---------- */
+  // The whole schedule is packed into the link itself, so a shared link needs
+  // no server and no account — but the page has to live at a real web address
+  // for the other person to be able to open it.
+
+  function encodeState(s){
+    var bytes = new TextEncoder().encode(JSON.stringify(s));
+    var bin = "";
+    for(var i=0;i<bytes.length;i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  }
+
+  function decodeState(str){
+    var b64 = str.replace(/-/g,"+").replace(/_/g,"/");
+    while(b64.length % 4) b64 += "=";
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    return JSON.parse(new TextDecoder().decode(bytes));
+  }
+
+  function readLink(){
+    try{
+      var m = /[#&]s=([A-Za-z0-9\-_]+)/.exec(location.hash);
+      if(!m) return null;
+      var s = decodeState(m[1]);
+      if(!s || !Array.isArray(s.days) || s.days.length !== 5) return null;
+      history.replaceState(null, "", location.pathname + location.search);
+      return migrate(s);
+    }catch(e){
+      return null;
+    }
+  }
+
+  var openedFromLink = false;
+  var state = load();
+  var forceWide = false;
+
+  function load(){
+    var shared = readLink();
+    if(shared){ openedFromLink = true; return shared; }
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      if(!parsed || !Array.isArray(parsed.days) || parsed.days.length !== 5) return defaultState();
+      return migrate(parsed);
+    }catch(e){
+      return defaultState();
+    }
+  }
+
+  function saveLocal(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  function save(){
+    saveLocal();
+    sync.queue();
+  }
+
+  /* ---------- gemensamt schema (live sync) ---------- */
+  // Öppnas sidan med #id=... och SCHEMA_SYNC är ifyllt, så bor schemat i en delad
+  // tabell istället för bara i den här webbläsaren. Båda öppnar samma länk och ser
+  // varandras ändringar. Utan #id=... fungerar allt precis som förut, lokalt.
+
+  function isEditing(){
+    var a = document.activeElement;
+    return !!(a && a.isContentEditable);
+  }
+
+  function newScheduleId(){
+    var bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    var out = "";
+    for(var i=0;i<bytes.length;i++) out += ("0" + bytes[i].toString(16)).slice(-2);
+    return out;
+  }
+
+  function readSharedId(){
+    var m = /[#&]id=([a-f0-9]{32})/.exec(location.hash);
+    return m ? m[1] : null;
+  }
+
+  function sharedLink(){
+    return location.origin + location.pathname + location.search + "#id=" + sync.id;
+  }
+
+  var sync = {
+    id: null,
+    enabled: false,
+    lastSeen: null,
+    timer: null,
+    debounce: null,
+    dirty: false,
+
+    config: function(){
+      var c = window.SCHEMA_SYNC || {};
+      return (c.url && c.anonKey) ? c : null;
+    },
+
+    setStatus: function(text, warn){
+      var n = document.getElementById("sync-msg");
+      if(!n) return;
+      n.textContent = text;
+      n.className = "hint sync-pill" + (warn ? " warn" : "");
+    },
+
+    rpc: function(fn, body){
+      var c = sync.config();
+      return fetch(c.url.replace(/\/+$/, "") + "/rest/v1/rpc/" + fn, {
+        method: "POST",
+        headers: {
+          "apikey": c.anonKey,
+          "Authorization": "Bearer " + c.anonKey,
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(body)
+      }).then(function(res){
+        if(!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      });
+    },
+
+    start: function(id){
+      if(!sync.config()) return false;
+      sync.id = id;
+      sync.enabled = true;
+      sync.setStatus("Ansluter…");
+      sync.pull(true);
+      if(sync.timer) clearInterval(sync.timer);
+      sync.timer = setInterval(function(){ sync.pull(false); }, 4000);
+      return true;
+    },
+
+    stop: function(){
+      sync.enabled = false;
+      sync.id = null;
+      sync.lastSeen = null;
+      if(sync.timer) clearInterval(sync.timer);
+      sync.setStatus("");
+    },
+
+    pull: function(first){
+      if(!sync.enabled) return;
+      sync.rpc("schedule_get", {p_id: sync.id}).then(function(rows){
+        var row = Array.isArray(rows) ? rows[0] : rows;
+        if(!row){
+          if(first) sync.push();              // den som kommer först skapar schemat
+          return;
+        }
+        if(row.updated_at === sync.lastSeen){ sync.setStatus("Synkat"); return; }
+        if(sync.dirty || isEditing()) return; // rycker inte undan text mitt i en redigering
+        sync.lastSeen = row.updated_at;
+        state = migrate(row.data);
+        saveLocal();
+        syncSettings();
+        renderPeople();
+        render();
+        renderShared();
+        sync.setStatus("Synkat");
+      }).catch(function(){
+        sync.setStatus("Ingen kontakt – sparas lokalt", true);
+      });
+    },
+
+    queue: function(){
+      if(!sync.enabled) return;
+      sync.dirty = true;
+      sync.setStatus("Sparar…");
+      clearTimeout(sync.debounce);
+      sync.debounce = setTimeout(sync.push, 700);
+    },
+
+    push: function(){
+      if(!sync.enabled) return;
+      sync.rpc("schedule_put", {p_id: sync.id, p_data: state}).then(function(ts){
+        sync.lastSeen = ts;
+        sync.dirty = false;
+        sync.setStatus("Synkat");
+      }).catch(function(){
+        sync.setStatus("Kunde inte spara – försöker igen", true);
+        clearTimeout(sync.debounce);
+        sync.debounce = setTimeout(sync.push, 4000);
+      });
+    }
+  };
+
+  function personById(id){
+    for(var i=0;i<state.people.length;i++){
+      if(state.people[i].id === id) return state.people[i];
+    }
+    return null;
+  }
+
+  function el(tag, cls, text){
+    var n = document.createElement(tag);
+    if(cls) n.className = cls;
+    if(text != null) n.textContent = text;
+    return n;
+  }
+
+  function applyTone(node, toneKey){
+    var t = TONES[toneKey] || TONES.blue;
+    node.style.setProperty("--bg", t.bg);
+    node.style.setProperty("--fg", t.fg);
+  }
+
+  /* ---------- cell builders ---------- */
+
+  function buildBool(dayIndex, rowKey){
+    var on = !!state.days[dayIndex][rowKey];
+    var b = el("button", "cell bool " + (on ? "neutral" : "empty"), on ? "Ja" : "Nej");
+    b.type = "button";
+    b.addEventListener("click", function(){
+      state.days[dayIndex][rowKey] = !state.days[dayIndex][rowKey];
+      save();
+      render();
+    });
+    return b;
+  }
+
+  function buildPerson(dayIndex, rowKey){
+    var slot = state.days[dayIndex][rowKey] || {person:null, time:""};
+    var person = personById(slot.person);
+    var cell = el("div", "cell " + (person ? "tinted" : "empty"));
+    if(person) applyTone(cell, person.tone);
+
+    var nameBtn = el("button", "name", person ? person.name : "—");
+    nameBtn.type = "button";
+    nameBtn.title = "Klicka för att byta person";
+    nameBtn.addEventListener("click", function(){
+      slot.person = nextPersonId(slot.person);
+      state.days[dayIndex][rowKey] = slot;
+      save();
+      render();
+    });
+    cell.appendChild(nameBtn);
+
+    var line = el("div", "time-line");
+    line.appendChild(document.createTextNode("kl "));
+    var time = el("span", "time", slot.time || "");
+    time.contentEditable = "true";
+    time.spellcheck = false;
+    time.title = "Klicka för att ändra tiden";
+    time.addEventListener("blur", function(){
+      var v = time.textContent.trim();
+      if(v === slot.time) return;            // inget ändrat – rör inte det delade schemat
+      slot.time = v;
+      state.days[dayIndex][rowKey] = slot;
+      save();
+    });
+    time.addEventListener("keydown", function(ev){
+      if(ev.key === "Enter"){ ev.preventDefault(); time.blur(); }
+    });
+    line.appendChild(time);
+    cell.appendChild(line);
+    return cell;
+  }
+
+  function nextPersonId(currentId){
+    var ids = state.people.map(function(p){ return p.id; });
+    ids.push(null); // allow an empty slot in the cycle
+    var i = ids.indexOf(currentId);
+    return ids[(i + 1) % ids.length];
+  }
+
+  function buildNote(dayIndex, rowKey){
+    var text = state.days[dayIndex][rowKey] || "";
+    var cell = el("div", "cell note" + (text ? "" : " blank"), text);
+    cell.contentEditable = "true";
+    cell.addEventListener("blur", function(){
+      var v = cell.textContent.trim();
+      if(v === (state.days[dayIndex][rowKey] || "")) return;
+      state.days[dayIndex][rowKey] = v;
+      save();
+      render();
+    });
+    return cell;
+  }
+
+  function buildCell(dayIndex, row){
+    if(row.type === "bool")   return buildBool(dayIndex, row.key);
+    if(row.type === "person") return buildPerson(dayIndex, row.key);
+    return buildNote(dayIndex, row.key);
+  }
+
+  /* ---------- heading ---------- */
+
+  function editableNumber(cls, value, min, max, onCommit){
+    var span = el("span", cls, String(value));
+    span.contentEditable = "true";
+    span.spellcheck = false;
+    span.inputMode = "numeric";
+    span.addEventListener("keydown", function(ev){
+      if(ev.key === "Enter"){ ev.preventDefault(); span.blur(); }
+    });
+    span.addEventListener("blur", function(){
+      var n = parseInt(span.textContent.replace(/\D/g, ""), 10);
+      if(isNaN(n) || n < min || n > max) n = value;   // lägg tillbaka det gamla värdet
+      if(n === value){ span.textContent = String(value); return; }
+      onCommit(n);
+    });
+    return span;
+  }
+
+  function stepWeek(delta){
+    var monday = mondayOfISOWeek(state.week, state.year);
+    monday.setUTCDate(monday.getUTCDate() + delta * 7);
+    var iso = isoWeekOf(monday);
+    state.week = iso.week;
+    state.year = iso.year;
+    save();
+    render();
+  }
+
+  function buildHeading(){
+    var head = el("div", "doc-head");
+
+    var left = el("div");
+    var h1 = el("h1", "doc-title", state.title);
+    h1.contentEditable = "true";
+    h1.spellcheck = false;
+    h1.addEventListener("blur", function(){
+      var v = h1.textContent.trim();
+      if(v === state.title) return;
+      state.title = v;
+      save();
+      syncSettings();
+    });
+    left.appendChild(h1);
+
+    var p = el("p", "doc-sub", state.subtitle);
+    p.contentEditable = "true";
+    p.addEventListener("blur", function(){
+      var v = p.textContent.trim();
+      if(v === state.subtitle) return;
+      state.subtitle = v;
+      save();
+      syncSettings();
+    });
+    left.appendChild(p);
+    head.appendChild(left);
+
+    var box = el("div", "weekbox");
+
+    var prev = el("button", "step no-print", "‹");
+    prev.type = "button";
+    prev.title = "Föregående vecka";
+    prev.addEventListener("click", function(){ stepWeek(-1); });
+    box.appendChild(prev);
+
+    var field = el("div", "weekfield");
+    field.appendChild(el("span", "lbl", "Vecka"));
+    field.appendChild(editableNumber("num", state.week, 1, 53, function(n){
+      state.week = n; save(); render();
+    }));
+    field.appendChild(editableNumber("yr", state.year, 2000, 2100, function(n){
+      state.year = n; save(); render();
+    }));
+    box.appendChild(field);
+
+    var next = el("button", "step no-print", "›");
+    next.type = "button";
+    next.title = "Nästa vecka";
+    next.addEventListener("click", function(){ stepWeek(1); });
+    box.appendChild(next);
+
+    head.appendChild(box);
+    return head;
+  }
+
+  /* ---------- layouts ---------- */
+
+  function renderWide(){
+    var grid = el("div", "grid wide");
+    grid.appendChild(el("div"));                       // empty corner
+    DAYS.forEach(function(day, i){
+      var head = el("div", "dayhead");
+      head.appendChild(el("span", "dname", day));
+      head.appendChild(el("span", "ddate", formatDate(dateForDay(i))));
+      grid.appendChild(head);
+    });
+    ROWS.forEach(function(row){
+      grid.appendChild(el("div", "rowlabel" + (row.type === "note" ? " for-note" : ""), row.label));
+      for(var i=0;i<5;i++) grid.appendChild(buildCell(i, row));
+    });
+    return grid;
+  }
+
+  function renderNarrow(){
+    var wrap = el("div", "grid");
+    DAYS.forEach(function(day, i){
+      var card = el("div", "daycard");
+      var h3 = el("h3");
+      h3.appendChild(document.createTextNode(day + " "));
+      h3.appendChild(el("span", "ddate", formatDate(dateForDay(i))));
+      card.appendChild(h3);
+      ROWS.forEach(function(row){
+        if(row.type === "note" && !state.days[i][row.key]) return;
+        var line = el("div", "line");
+        line.appendChild(el("span", null, row.label || "Notering"));
+        line.appendChild(buildCell(i, row));
+        card.appendChild(line);
+      });
+      wrap.appendChild(card);
+    });
+    return wrap;
+  }
+
+  function render(){
+    var paper = document.getElementById("paper");
+    paper.innerHTML = "";
+    paper.appendChild(buildHeading());
+    var narrow = !forceWide && window.matchMedia("(max-width: 700px)").matches;
+    paper.appendChild(narrow ? renderNarrow() : renderWide());
+  }
+
+  /* ---------- settings panel ---------- */
+
+  function renderPeople(){
+    var host = document.getElementById("people");
+    host.innerHTML = "";
+    state.people.forEach(function(person, index){
+      var row = el("div", "person-row");
+
+      var input = document.createElement("input");
+      input.type = "text";
+      input.value = person.name;
+      input.addEventListener("input", function(){
+        person.name = input.value;
+        save();
+        render();
+      });
+      row.appendChild(input);
+
+      var swatches = el("div", "swatches");
+      TONE_KEYS.forEach(function(key){
+        var s = document.createElement("button");
+        s.type = "button";
+        s.className = "swatch";
+        s.style.setProperty("--bg", TONES[key].bg);
+        s.setAttribute("aria-pressed", person.tone === key ? "true" : "false");
+        s.title = key;
+        s.addEventListener("click", function(){
+          person.tone = key;
+          save();
+          renderPeople();
+          render();
+        });
+        swatches.appendChild(s);
+      });
+      row.appendChild(swatches);
+
+      var del = el("button", "icon-btn", "×");
+      del.type = "button";
+      del.title = "Ta bort";
+      del.disabled = state.people.length <= 1;
+      del.addEventListener("click", function(){
+        var removed = state.people.splice(index, 1)[0];
+        state.days.forEach(function(day){
+          ["drop","pickup"].forEach(function(k){
+            if(day[k] && day[k].person === removed.id) day[k].person = null;
+          });
+        });
+        save();
+        renderPeople();
+        render();
+      });
+      row.appendChild(del);
+
+      host.appendChild(row);
+    });
+  }
+
+  function syncSettings(){
+    document.getElementById("set-title").value = state.title;
+    document.getElementById("set-sub").value = state.subtitle;
+  }
+
+  function copyText(text, msgNode){
+    function fallback(){
+      window.prompt("Kopiera länken:", text);
+      if(msgNode) msgNode.textContent = "";
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        if(msgNode) msgNode.textContent = "Länk kopierad – klistra in den där du vill dela schemat.";
+      }, fallback);
+    }else{
+      fallback();
+    }
+  }
+
+  function renderShared(){
+    var sub = document.getElementById("shared-sub");
+    var area = document.getElementById("shared-area");
+    if(!sub || !area) return;
+    area.innerHTML = "";
+
+    if(!sync.config()){
+      sub.textContent = "Inte uppsatt än. Fyll i Supabase-uppgifterna högst upp i index.html, så kan ni redigera samma schema samtidigt. Stegen står i SETUP.md.";
+      return;
+    }
+
+    if(sync.enabled){
+      sub.textContent = "Det här schemat är gemensamt. Alla som har länken ser och ändrar samma vecka.";
+      var row = el("div", "linkrow");
+      var input = document.createElement("input");
+      input.type = "text";
+      input.readOnly = true;
+      input.value = sharedLink();
+      input.addEventListener("focus", function(){ input.select(); });
+      row.appendChild(input);
+      var copy = el("button", "btn", "Kopiera");
+      copy.type = "button";
+      copy.addEventListener("click", function(){
+        copyText(sharedLink(), document.getElementById("share-msg"));
+      });
+      row.appendChild(copy);
+      area.appendChild(row);
+
+      var off = el("button", "btn", "Koppla från");
+      off.type = "button";
+      off.title = "Fortsätt med en egen lokal kopia istället";
+      off.addEventListener("click", function(){
+        sync.stop();
+        history.replaceState(null, "", location.pathname + location.search);
+        renderShared();
+      });
+      area.appendChild(off);
+    }else{
+      sub.textContent = "Skapa ett gemensamt schema och skicka länken vidare. Den som öppnar den redigerar samma vecka som du – inget konto behövs.";
+      var make = el("button", "btn primary", "Skapa gemensamt schema");
+      make.type = "button";
+      make.addEventListener("click", function(){
+        var id = newScheduleId();
+        history.replaceState(null, "", location.pathname + location.search + "#id=" + id);
+        sync.start(id);
+        renderShared();
+      });
+      area.appendChild(make);
+    }
+  }
+
+  /* ---------- wiring ---------- */
+
+  document.getElementById("print").addEventListener("click", function(){
+    window.print();
+  });
+
+  document.getElementById("toggle-settings").addEventListener("click", function(){
+    document.getElementById("settings").classList.toggle("open");
+  });
+
+  document.getElementById("share").addEventListener("click", function(){
+    var msg = document.getElementById("share-msg");
+    if(location.protocol === "file:"){
+      msg.textContent = "Sidan måste ligga på en webbadress först – en fil-länk fungerar bara på den här datorn.";
+      return;
+    }
+    // Är schemat gemensamt delar vi den levande länken, annars en ögonblicksbild.
+    copyText(sync.enabled ? sharedLink()
+                          : location.origin + location.pathname + location.search + "#s=" + encodeState(state),
+             msg);
+  });
+
+  document.getElementById("set-title").addEventListener("input", function(e){
+    state.title = e.target.value; save(); render();
+  });
+  document.getElementById("set-sub").addEventListener("input", function(e){
+    state.subtitle = e.target.value; save(); render();
+  });
+
+  document.getElementById("add-person").addEventListener("click", function(){
+    var used = state.people.map(function(p){ return p.tone; });
+    var tone = TONE_KEYS.filter(function(k){ return used.indexOf(k) === -1; })[0] || "green";
+    state.people.push({id:"p" + Date.now(), name:"Ny person", tone:tone});
+    save();
+    renderPeople();
+    render();
+  });
+
+  document.getElementById("reset").addEventListener("click", function(){
+    if(!window.confirm("Återställ schemat till exemplet? Dina ändringar försvinner.")) return;
+    state = defaultState();
+    save();
+    syncSettings();
+    renderPeople();
+    render();
+  });
+
+  // Always print the full week grid, even from a phone.
+  window.addEventListener("beforeprint", function(){ forceWide = true; render(); });
+  window.addEventListener("afterprint",  function(){ forceWide = false; render(); });
+
+  var mq = window.matchMedia("(max-width: 700px)");
+  (mq.addEventListener ? mq.addEventListener.bind(mq, "change") : mq.addListener.bind(mq))(function(){ render(); });
+
+  if(openedFromLink){
+    save();
+    document.getElementById("share-msg").textContent = "Öppnat från en delad länk – nu sparad här.";
+  }
+
+  syncSettings();
+  renderPeople();
+  render();
+
+  // Webbläsare bromsar timers i flikar som ligger i bakgrunden. Hämta direkt när
+  // sidan tas fram igen, så slipper man vänta på nästa pollning.
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden) sync.pull(false);
+  });
+
+  var sharedId = readSharedId();
+  if(sharedId && !sync.start(sharedId)){
+    sync.setStatus("Gemensamt schema kan inte laddas – Supabase är inte ifyllt", true);
+  }
+  renderShared();
+})();
+</script>
+</body>
+</html>
