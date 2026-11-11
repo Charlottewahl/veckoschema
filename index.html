@@ -546,10 +546,24 @@
     };
   }
 
-  function emptyDays(){
+  // Vardagarna ligger kvar i weeks[nyckel] som exakt fem dagar, och helgen i en
+  // egen nyckel. Det är med flit: en äldre version av sidan, cachad i någons
+  // telefon, raderar varje vecka som inte har fem dagar. Den lämnar däremot
+  // nycklar den inte känner till i fred, så helgen överlever.
+  function emptyWeekdays(){
     var out = [];
-    for(var i = 0; i < DAY_COUNT; i++) out.push(emptyDay());
+    for(var i = 0; i < WEEKDAYS; i++) out.push(emptyDay());
     return out;
+  }
+
+  function emptyWeekendDays(){
+    var out = [];
+    for(var i = WEEKDAYS; i < DAY_COUNT; i++) out.push(emptyDay());
+    return out;
+  }
+
+  function emptyDays(){
+    return emptyWeekdays().concat(emptyWeekendDays());
   }
 
   function isDayEmpty(d){
@@ -563,16 +577,27 @@
     return true;
   }
 
-  // Det som ritas just nu. Finns veckan inte sparad får vi en tom, utan att spara den.
+  // Det som ritas just nu, satt samman av de två lagren. Finns veckan inte
+  // sparad får vi en tom, utan att spara den.
   function daysForRender(){
-    return state.weeks[weekKey(state.week, state.year)] || emptyDays();
+    var k = weekKey(state.week, state.year);
+    return (state.weeks[k] || emptyWeekdays())
+      .concat(state.weekend[k] || emptyWeekendDays());
   }
 
-  // Används när något faktiskt ändras – då skapas veckan på riktigt.
-  function daysForEdit(){
+  // Används när något faktiskt ändras – då skapas rätt lager på riktigt.
+  function dayForEdit(i){
     var k = weekKey(state.week, state.year);
-    if(!state.weeks[k]) state.weeks[k] = emptyDays();
-    return state.weeks[k];
+    if(i < WEEKDAYS){
+      if(!state.weeks[k]) state.weeks[k] = emptyWeekdays();
+      return state.weeks[k][i];
+    }
+    if(!state.weekend[k]) state.weekend[k] = emptyWeekendDays();
+    return state.weekend[k][i - WEEKDAYS];
+  }
+
+  function weekHasContent(k){
+    return !!(state.weeks[k] || state.weekend[k]);
   }
 
   // Tomma veckor behöver inte ligga kvar och skräpa.
@@ -580,9 +605,12 @@
     Object.keys(state.weeks).forEach(function(k){
       if(isWeekEmpty(state.weeks[k])) delete state.weeks[k];
     });
+    Object.keys(state.weekend).forEach(function(k){
+      if(isWeekEmpty(state.weekend[k])) delete state.weekend[k];
+    });
     if(state.changes){
       Object.keys(state.changes).forEach(function(k){
-        if(!state.weeks[k]) delete state.changes[k];
+        if(!weekHasContent(k)) delete state.changes[k];
       });
     }
   }
@@ -628,9 +656,10 @@
 
   function clearWeek(){
     var k = weekKey(state.week, state.year);
-    if(!state.weeks[k]) return;
+    if(!weekHasContent(k)) return;
     if(!window.confirm("Är du säker? Hela vecka " + state.week + " rensas och det går inte att ångra.")) return;
     delete state.weeks[k];
+    delete state.weekend[k];
     if(state.changes) delete state.changes[k];
     save();
     render();
@@ -658,9 +687,7 @@
       {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"Inte idrott – Hampus ska vara i klassrummet med Eva-Marie", note2:""},
       {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
       {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
-      {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.00"}, note:"", note2:""},
-      emptyDay(),                                            // lördag
-      emptyDay()                                             // söndag
+      {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.00"}, note:"", note2:""}
     ];
   }
 
@@ -675,7 +702,8 @@
         {id:"mamma", name:"Mamma", tone:"rose"},
         {id:"pappa", name:"Pappa", tone:"blue"}
       ],
-      weeks: {}
+      weeks: {},
+      weekend: {}
     };
     s.weeks[weekKey(now.week, now.year)] = exampleDays();
     return s;
@@ -689,6 +717,7 @@
     if(typeof s.year !== "number" || s.year < 2000 || s.year > 2100) s.year = now.year;
 
     if(!s.changes || typeof s.changes !== "object") s.changes = {};
+    if(!s.weekend || typeof s.weekend !== "object") s.weekend = {};
 
     if(!s.weeks || typeof s.weeks !== "object"){
       s.weeks = {};
@@ -701,8 +730,13 @@
     Object.keys(s.weeks).forEach(function(k){
       var days = s.weeks[k];
       if(!Array.isArray(days) || days.length < WEEKDAYS){ delete s.weeks[k]; return; }
-      while(days.length < DAY_COUNT) days.push(emptyDay());   // helgen tillkom senare
-      days.length = DAY_COUNT;
+      // En kort tid sparades helgen i samma lista – flytta över den
+      if(days.length > WEEKDAYS){
+        var tail = days.slice(WEEKDAYS, DAY_COUNT);
+        while(tail.length < DAY_COUNT - WEEKDAYS) tail.push(emptyDay());
+        if(!s.weekend[k]) s.weekend[k] = tail;
+        s.weeks[k] = days = days.slice(0, WEEKDAYS);
+      }
       days.forEach(function(day){
         day.ledig = !!day.ledig;
         NOTE_KEYS.forEach(function(n){
@@ -1253,7 +1287,7 @@
     b.type = "button";
     b.title = "Klicka för att växla mellan tomt, Ja och Nej";
     b.addEventListener("click", function(){
-      daysForEdit()[dayIndex][rowKey] = nextBool(v);
+      dayForEdit(dayIndex)[rowKey] = nextBool(v);
       touchWeek();
       save();
       render();
@@ -1271,7 +1305,7 @@
     nameBtn.type = "button";
     nameBtn.title = "Klicka för att byta person";
     nameBtn.addEventListener("click", function(){
-      daysForEdit()[dayIndex][rowKey] = {
+      dayForEdit(dayIndex)[rowKey] = {
         person: nextPersonId(slot.person),
         time: slot.time || ""
       };
@@ -1290,7 +1324,7 @@
     time.addEventListener("blur", function(){
       var v = time.textContent.trim();
       if(v === (slot.time || "")) return;    // inget ändrat – rör inte det delade schemat
-      daysForEdit()[dayIndex][rowKey] = {person: slot.person, time: v};
+      dayForEdit(dayIndex)[rowKey] = {person: slot.person, time: v};
       touchWeek();
       save();
     });
@@ -1317,7 +1351,7 @@
     cell.addEventListener("blur", function(){
       var v = cell.textContent.trim();
       if(v === text) return;
-      daysForEdit()[dayIndex][rowKey] = v;
+      dayForEdit(dayIndex)[rowKey] = v;
       touchWeek();
       save();
       render();
@@ -1328,7 +1362,7 @@
   // Ledig tömmer skola och fritids för dagen. Noteringar får stå kvar –
   // det är ofta där man skriver vad man gör istället.
   function setLedig(dayIndex, on){
-    var d = daysForEdit()[dayIndex];
+    var d = dayForEdit(dayIndex);
     d.ledig = !!on;
     if(on){
       d.morning = null;
@@ -1402,9 +1436,12 @@
     var monday = mondayOfISOWeek(state.week, state.year);
     monday.setUTCDate(monday.getUTCDate() - 7);
     var prev = isoWeekOf(monday);
-    var source = state.weeks[weekKey(prev.week, prev.year)];
-    if(!source) return;
-    state.weeks[weekKey(state.week, state.year)] = JSON.parse(JSON.stringify(source));
+    var from = weekKey(prev.week, prev.year);
+    var to = weekKey(state.week, state.year);
+    if(!weekHasContent(from)) return;
+    var clone = function(v){ return JSON.parse(JSON.stringify(v)); };
+    if(state.weeks[from])   state.weeks[to]   = clone(state.weeks[from]);
+    if(state.weekend[from]) state.weekend[to] = clone(state.weekend[from]);
     touchWeek();
     save();
     render();
@@ -1414,7 +1451,7 @@
     var monday = mondayOfISOWeek(state.week, state.year);
     monday.setUTCDate(monday.getUTCDate() - 7);
     var prev = isoWeekOf(monday);
-    return !!state.weeks[weekKey(prev.week, prev.year)];
+    return weekHasContent(weekKey(prev.week, prev.year));
   }
 
   function buildHeading(){
@@ -1485,7 +1522,7 @@
     }
 
     // Rensa bara när det finns något att rensa
-    if(state.weeks[weekKey(state.week, state.year)]){
+    if(weekHasContent(weekKey(state.week, state.year))){
       var clr = el("button", "clearbtn", "Rensa veckan");
       clr.type = "button";
       clr.title = "Tömmer hela veckan";

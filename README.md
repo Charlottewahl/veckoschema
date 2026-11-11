@@ -42,6 +42,11 @@ I liggande läge ligger de i en egen smalare kolumn längst till höger, lördag
 söndag, så vardagarna behåller sin bredd. I stående läge kommer de som två vanliga
 dagkort sist.
 
+Helgen sparas under en egen nyckel (`weekend`) och inte tillsammans med vardagarna i
+`weeks`. Det är med flit: en äldre version av sidan, cachad i någons telefon, slänger
+varje vecka som inte har exakt fem dagar. Den lämnar däremot nycklar den inte känner
+till i fred, så helgen överlever även om en gammal och en ny version delar schema.
+
 ## Lediga dagar
 
 Varje dag har en bockruta **Ledig**. Bockar du i den försvinner lämning, hämtning,
