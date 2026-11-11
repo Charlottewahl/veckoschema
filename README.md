@@ -19,6 +19,21 @@ fungerar utan internet.
 Datumen under varje veckodag räknas ut automatiskt från vecka och år, enligt svensk
 veckonumrering (ISO). Årsskiften sköter sig själva: vecka 53 2026 följs av vecka 1 2027.
 
+## Planera framåt
+
+Varje vecka har sitt eget innehåll. Bläddrar du fram med **›** eller skriver in ett
+veckonummer kommer du till en **tom** vecka som du kan fylla i i förväg — till exempel
+att farfar hämtar på fredag nästa vecka.
+
+När du inte står på innevarande vecka blir veckorutan markerad, och det står hur långt
+bort du är ("nästa vecka", "om 2 veckor"). Knappen **Denna vecka** tar dig tillbaka.
+
+På en tom vecka finns också **Kopiera förra veckan**, om rutinen är ungefär densamma
+och du bara vill ändra en detalj.
+
+Veckor du inte rört tar ingen plats, och tömmer du en vecka försvinner den igen.
+Vilken vecka du tittar på är personligt — bläddrar du framåt flyttas inte den andras vy.
+
 Allt sparas automatiskt i webbläsaren på den enhet du använder. Inget skickas någonstans.
 
 Under **Inställningar** byter du rubrik, och lägger till eller byter namn och färg på

@@ -154,6 +154,32 @@
     font-size:15px; font-weight:700; color:var(--ink-muted);
     outline:none; min-width:2.6em; text-align:center;
   }
+  /* Tydlig skillnad när man bläddrat bort från innevarande vecka */
+  .weekfield.other{background:#eef2ff; box-shadow:inset 0 0 0 2px #c7d2fe}
+  .weekwrap{display:flex; flex-direction:column; align-items:flex-end; gap:6px}
+  .weekrow{display:flex; align-items:center; gap:6px}
+  .weeknote{
+    display:flex; align-items:center; gap:8px;
+    font-size:13px; font-weight:600; color:var(--ink-muted);
+  }
+  .todaybtn{
+    font:inherit; font-size:13px; font-weight:700; cursor:pointer;
+    padding:5px 11px; border-radius:8px;
+    border:1px solid #c7d2fe; background:#eef2ff; color:#4338ca;
+  }
+  .todaybtn:hover{background:#e0e7ff}
+  .emptybar{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    margin-top:22px; padding:12px 16px;
+    border:2px dashed var(--empty-line); border-radius:12px;
+    font-size:14px; color:var(--ink-muted);
+  }
+  .emptybar button{
+    font:inherit; font-size:13px; font-weight:700; cursor:pointer;
+    padding:6px 12px; border-radius:8px;
+    border:1px solid var(--chrome-line); background:var(--paper); color:var(--ink);
+  }
+  .emptybar button:hover{border-color:var(--ink-muted)}
 
   .grid{display:grid; gap:10px; margin-top:30px}
   .grid.wide{grid-template-columns:minmax(92px,150px) repeat(5,minmax(0,1fr))}
@@ -379,9 +405,87 @@
 
   /* ---------- state ---------- */
 
+  /* ---------- veckor ---------- */
+  // Varje vecka har sin egen data, sparad under en nyckel som "2026-46".
+  // En vecka som ingen rört finns inte i state alls – den ritas tom.
+
+  function weekKey(week, year){
+    return year + "-" + (week < 10 ? "0" + week : "" + week);
+  }
+
+  function emptyDay(){
+    return {
+      morning:false,
+      drop:{person:null, time:""},
+      fritids:false,
+      pickup:{person:null, time:""},
+      note:"", note2:""
+    };
+  }
+
+  function emptyDays(){
+    return [emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay()];
+  }
+
+  function isDayEmpty(d){
+    return !d.morning && !d.fritids && !d.note && !d.note2 &&
+           !(d.drop && (d.drop.person || d.drop.time)) &&
+           !(d.pickup && (d.pickup.person || d.pickup.time));
+  }
+
+  function isWeekEmpty(days){
+    for(var i=0;i<days.length;i++){ if(!isDayEmpty(days[i])) return false; }
+    return true;
+  }
+
+  // Det som ritas just nu. Finns veckan inte sparad får vi en tom, utan att spara den.
+  function daysForRender(){
+    return state.weeks[weekKey(state.week, state.year)] || emptyDays();
+  }
+
+  // Används när något faktiskt ändras – då skapas veckan på riktigt.
+  function daysForEdit(){
+    var k = weekKey(state.week, state.year);
+    if(!state.weeks[k]) state.weeks[k] = emptyDays();
+    return state.weeks[k];
+  }
+
+  // Tomma veckor behöver inte ligga kvar och skräpa.
+  function pruneWeeks(){
+    Object.keys(state.weeks).forEach(function(k){
+      if(isWeekEmpty(state.weeks[k])) delete state.weeks[k];
+    });
+  }
+
+  function weeksFromNow(){
+    var now = currentWeek();
+    var a = mondayOfISOWeek(now.week, now.year);
+    var b = mondayOfISOWeek(state.week, state.year);
+    return Math.round((b - a) / (7 * 86400000));
+  }
+
+  function relativeWeekLabel(){
+    var n = weeksFromNow();
+    if(n === 0)  return "denna vecka";
+    if(n === 1)  return "nästa vecka";
+    if(n === -1) return "förra veckan";
+    if(n > 1)    return "om " + n + " veckor";
+    return (-n) + " veckor sedan";
+  }
+
+  function exampleDays(){
+    return [
+      {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.30"}, note:"", note2:""},
+      {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"Inte idrott – Hampus ska vara i klassrummet med Eva-Marie", note2:""},
+      {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
+      {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
+      {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.00"}, note:"", note2:""}
+    ];
+  }
+
   function defaultState(){
     var now = currentWeek();
-    return {
+    var s = {
       title: "Hampus vecka",
       subtitle: "Vem lämnar, vem hämtar och när det är fritids",
       week: now.week,
@@ -390,24 +494,37 @@
         {id:"mamma", name:"Mamma", tone:"rose"},
         {id:"pappa", name:"Pappa", tone:"blue"}
       ],
-      days: [
-        {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.30"}, note:"", note2:""},
-        {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"Inte idrott – Hampus ska vara i klassrummet med Eva-Marie", note2:""},
-        {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
-        {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
-        {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.00"}, note:"", note2:""}
-      ]
+      weeks: {}
     };
+    s.weeks[weekKey(now.week, now.year)] = exampleDays();
+    return s;
   }
 
-  // Fills in anything an older saved schedule is missing.
+  // Fyller i det ett äldre sparat schema saknar, och flyttar scheman från
+  // tiden då alla veckor delade samma innehåll.
   function migrate(s){
     var now = currentWeek();
     if(typeof s.week !== "number" || s.week < 1 || s.week > 53) s.week = now.week;
     if(typeof s.year !== "number" || s.year < 2000 || s.year > 2100) s.year = now.year;
-    s.days.forEach(function(day){
-      NOTE_KEYS.forEach(function(k){
-        if(typeof day[k] !== "string") day[k] = "";
+
+    if(!s.weeks || typeof s.weeks !== "object"){
+      s.weeks = {};
+      if(Array.isArray(s.days) && s.days.length === 5){
+        s.weeks[weekKey(s.week, s.year)] = s.days;   // gamla formatet: en enda vecka
+      }
+    }
+    delete s.days;
+
+    Object.keys(s.weeks).forEach(function(k){
+      var days = s.weeks[k];
+      if(!Array.isArray(days) || days.length !== 5){ delete s.weeks[k]; return; }
+      days.forEach(function(day){
+        NOTE_KEYS.forEach(function(n){
+          if(typeof day[n] !== "string") day[n] = "";
+        });
+        ["drop","pickup"].forEach(function(p){
+          if(!day[p] || typeof day[p] !== "object") day[p] = {person:null, time:""};
+        });
       });
     });
     return s;
@@ -439,7 +556,8 @@
       var m = /[#&]s=([A-Za-z0-9\-_]+)/.exec(location.hash);
       if(!m) return null;
       var s = decodeState(m[1]);
-      if(!s || !Array.isArray(s.days) || s.days.length !== 5) return null;
+      if(!s || typeof s !== "object") return null;
+      if(!s.weeks && !Array.isArray(s.days)) return null;
       history.replaceState(null, "", location.pathname + location.search);
       return migrate(s);
     }catch(e){
@@ -458,7 +576,8 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if(!raw) return defaultState();
       var parsed = JSON.parse(raw);
-      if(!parsed || !Array.isArray(parsed.days) || parsed.days.length !== 5) return defaultState();
+      if(!parsed || typeof parsed !== "object") return defaultState();
+      if(!parsed.weeks && !Array.isArray(parsed.days)) return defaultState();
       return migrate(parsed);
     }catch(e){
       return defaultState();
@@ -470,6 +589,7 @@
   }
 
   function save(){
+    pruneWeeks();
     saveLocal();
     sync.queue();
   }
@@ -568,7 +688,10 @@
         if(row.updated_at === sync.lastSeen){ sync.setStatus("Synkat"); return; }
         if(sync.dirty || isEditing()) return; // rycker inte undan text mitt i en redigering
         sync.lastSeen = row.updated_at;
+        var keepWeek = state.week, keepYear = state.year;
         state = migrate(row.data);
+        state.week = keepWeek;                // behåll min egen vy
+        state.year = keepYear;
         saveLocal();
         syncSettings();
         renderPeople();
@@ -625,11 +748,12 @@
   /* ---------- cell builders ---------- */
 
   function buildBool(dayIndex, rowKey){
-    var on = !!state.days[dayIndex][rowKey];
+    var on = !!daysForRender()[dayIndex][rowKey];
     var b = el("button", "cell bool " + (on ? "neutral" : "empty"), on ? "Ja" : "Nej");
     b.type = "button";
     b.addEventListener("click", function(){
-      state.days[dayIndex][rowKey] = !state.days[dayIndex][rowKey];
+      var d = daysForEdit()[dayIndex];
+      d[rowKey] = !d[rowKey];
       save();
       render();
     });
@@ -637,7 +761,7 @@
   }
 
   function buildPerson(dayIndex, rowKey){
-    var slot = state.days[dayIndex][rowKey] || {person:null, time:""};
+    var slot = daysForRender()[dayIndex][rowKey] || {person:null, time:""};
     var person = personById(slot.person);
     var cell = el("div", "cell " + (person ? "tinted" : "empty"));
     if(person) applyTone(cell, person.tone);
@@ -646,8 +770,10 @@
     nameBtn.type = "button";
     nameBtn.title = "Klicka för att byta person";
     nameBtn.addEventListener("click", function(){
-      slot.person = nextPersonId(slot.person);
-      state.days[dayIndex][rowKey] = slot;
+      daysForEdit()[dayIndex][rowKey] = {
+        person: nextPersonId(slot.person),
+        time: slot.time || ""
+      };
       save();
       render();
     });
@@ -661,16 +787,16 @@
     time.title = "Klicka för att ändra tiden";
     time.addEventListener("blur", function(){
       var v = time.textContent.trim();
-      if(v === slot.time) return;            // inget ändrat – rör inte det delade schemat
-      slot.time = v;
-      state.days[dayIndex][rowKey] = slot;
+      if(v === (slot.time || "")) return;    // inget ändrat – rör inte det delade schemat
+      daysForEdit()[dayIndex][rowKey] = {person: slot.person, time: v};
       save();
     });
     time.addEventListener("keydown", function(ev){
       if(ev.key === "Enter"){ ev.preventDefault(); time.blur(); }
     });
     line.appendChild(time);
-    cell.appendChild(line);
+    // En helt tom ruta ska bara visa strecket, inte "kl —"
+    if(person || slot.time) cell.appendChild(line);
     return cell;
   }
 
@@ -682,13 +808,13 @@
   }
 
   function buildNote(dayIndex, rowKey){
-    var text = state.days[dayIndex][rowKey] || "";
+    var text = daysForRender()[dayIndex][rowKey] || "";
     var cell = el("div", "cell note" + (text ? "" : " blank"), text);
     cell.contentEditable = "true";
     cell.addEventListener("blur", function(){
       var v = cell.textContent.trim();
-      if(v === (state.days[dayIndex][rowKey] || "")) return;
-      state.days[dayIndex][rowKey] = v;
+      if(v === text) return;
+      daysForEdit()[dayIndex][rowKey] = v;
       save();
       render();
     });
@@ -720,14 +846,43 @@
     return span;
   }
 
+  // Vilken vecka man tittar på är personligt, inte delat: bläddrar du framåt
+  // ska inte den andras vy hoppa med. Därför bara saveLocal(), aldrig save().
+  function setWeek(w, y){
+    state.week = w;
+    state.year = y;
+    saveLocal();
+    render();
+  }
+
   function stepWeek(delta){
     var monday = mondayOfISOWeek(state.week, state.year);
     monday.setUTCDate(monday.getUTCDate() + delta * 7);
     var iso = isoWeekOf(monday);
-    state.week = iso.week;
-    state.year = iso.year;
+    setWeek(iso.week, iso.year);
+  }
+
+  function goToCurrentWeek(){
+    var now = currentWeek();
+    setWeek(now.week, now.year);
+  }
+
+  function copyPreviousWeek(){
+    var monday = mondayOfISOWeek(state.week, state.year);
+    monday.setUTCDate(monday.getUTCDate() - 7);
+    var prev = isoWeekOf(monday);
+    var source = state.weeks[weekKey(prev.week, prev.year)];
+    if(!source) return;
+    state.weeks[weekKey(state.week, state.year)] = JSON.parse(JSON.stringify(source));
     save();
     render();
+  }
+
+  function previousWeekHasContent(){
+    var monday = mondayOfISOWeek(state.week, state.year);
+    monday.setUTCDate(monday.getUTCDate() - 7);
+    var prev = isoWeekOf(monday);
+    return !!state.weeks[weekKey(prev.week, prev.year)];
   }
 
   function buildHeading(){
@@ -758,31 +913,46 @@
     left.appendChild(p);
     head.appendChild(left);
 
-    var box = el("div", "weekbox");
+    var offset = weeksFromNow();
+
+    var wrap = el("div", "weekwrap");
+    var row = el("div", "weekrow");
 
     var prev = el("button", "step no-print", "‹");
     prev.type = "button";
     prev.title = "Föregående vecka";
     prev.addEventListener("click", function(){ stepWeek(-1); });
-    box.appendChild(prev);
+    row.appendChild(prev);
 
-    var field = el("div", "weekfield");
+    var field = el("div", "weekfield" + (offset === 0 ? "" : " other"));
     field.appendChild(el("span", "lbl", "Vecka"));
     field.appendChild(editableNumber("num", state.week, 1, 53, function(n){
-      state.week = n; save(); render();
+      setWeek(n, state.year);
     }));
     field.appendChild(editableNumber("yr", state.year, 2000, 2100, function(n){
-      state.year = n; save(); render();
+      setWeek(state.week, n);
     }));
-    box.appendChild(field);
+    row.appendChild(field);
 
     var next = el("button", "step no-print", "›");
     next.type = "button";
     next.title = "Nästa vecka";
     next.addEventListener("click", function(){ stepWeek(1); });
-    box.appendChild(next);
+    row.appendChild(next);
+    wrap.appendChild(row);
 
-    head.appendChild(box);
+    // Visa var man är, och en väg tillbaka, bara när man bläddrat bort
+    if(offset !== 0){
+      var note = el("div", "weeknote no-print");
+      note.appendChild(el("span", null, relativeWeekLabel()));
+      var back = el("button", "todaybtn", "Denna vecka");
+      back.type = "button";
+      back.addEventListener("click", goToCurrentWeek);
+      note.appendChild(back);
+      wrap.appendChild(note);
+    }
+
+    head.appendChild(wrap);
     return head;
   }
 
@@ -805,6 +975,7 @@
   }
 
   function renderNarrow(){
+    var days = daysForRender();
     var wrap = el("div", "grid");
     DAYS.forEach(function(day, i){
       var card = el("div", "daycard");
@@ -813,7 +984,7 @@
       h3.appendChild(el("span", "ddate", formatDate(dateForDay(i))));
       card.appendChild(h3);
       ROWS.forEach(function(row){
-        if(row.type === "note" && !state.days[i][row.key]) return;
+        if(row.type === "note" && !days[i][row.key]) return;
         var line = el("div", "line");
         line.appendChild(el("span", null, row.label || "Notering"));
         line.appendChild(buildCell(i, row));
@@ -828,6 +999,18 @@
     var paper = document.getElementById("paper");
     paper.innerHTML = "";
     paper.appendChild(buildHeading());
+
+    // En orörd vecka: erbjud att ta förra veckan som utgångspunkt
+    if(isWeekEmpty(daysForRender()) && previousWeekHasContent()){
+      var bar = el("div", "emptybar no-print");
+      bar.appendChild(el("span", null, "Tom vecka – fyll i det som gäller, eller utgå från veckan innan."));
+      var copy = el("button", null, "Kopiera förra veckan");
+      copy.type = "button";
+      copy.addEventListener("click", copyPreviousWeek);
+      bar.appendChild(copy);
+      paper.appendChild(bar);
+    }
+
     var narrow = !forceWide && window.matchMedia("(max-width: 700px)").matches;
     paper.appendChild(narrow ? renderNarrow() : renderWide());
   }
@@ -874,9 +1057,11 @@
       del.disabled = state.people.length <= 1;
       del.addEventListener("click", function(){
         var removed = state.people.splice(index, 1)[0];
-        state.days.forEach(function(day){
-          ["drop","pickup"].forEach(function(k){
-            if(day[k] && day[k].person === removed.id) day[k].person = null;
+        Object.keys(state.weeks).forEach(function(wk){      // alla veckor, inte bara den synliga
+          state.weeks[wk].forEach(function(day){
+            ["drop","pickup"].forEach(function(k){
+              if(day[k] && day[k].person === removed.id) day[k].person = null;
+            });
           });
         });
         save();
