@@ -34,6 +34,14 @@ och du bara vill ändra en detalj.
 
 **Rensa veckan** tömmer hela den vecka du står på, efter en bekräftelsefråga.
 
+## Helgen
+
+Lördag och söndag har bara noteringsfält — ingen lämning, hämtning eller fritids.
+
+I liggande läge ligger de i en egen smalare kolumn längst till höger, lördag över
+söndag, så vardagarna behåller sin bredd. I stående läge kommer de som två vanliga
+dagkort sist.
+
 ## Lediga dagar
 
 Varje dag har en bockruta **Ledig**. Bockar du i den försvinner lämning, hämtning,

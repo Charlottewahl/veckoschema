@@ -188,7 +188,27 @@
   .emptybar button:hover{border-color:var(--ink-muted)}
 
   .grid{display:grid; gap:10px; margin-top:30px}
-  .grid.wide{grid-template-columns:minmax(56px,84px) repeat(5,minmax(0,1fr))}
+  .grid.wide{
+    grid-template-columns:minmax(56px,84px) repeat(5,minmax(0,1fr)) minmax(0,0.8fr);
+  }
+
+  /* Helgkolumnen: lördag över söndag */
+  .weekendcol{display:flex; flex-direction:column; gap:10px}
+  .weekendday{
+    flex:1; display:flex; flex-direction:column; gap:6px;
+    background:#fafbfc; border:1px solid #e9ecf1;
+    border-radius:12px; padding:9px 11px;
+  }
+  .weekendhead{display:flex; align-items:baseline; gap:6px; flex-wrap:wrap}
+  .weekendhead .dname{
+    font-size:11px; font-weight:600; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--ink-muted);
+  }
+  .weekendhead .ddate{font-size:12px; font-weight:700; color:var(--ink)}
+  .weekendday .cell.note{
+    min-height:0; flex:1; padding:8px 10px; font-size:13px; border-radius:9px;
+  }
+  .weekendday .cell.note.blank{border-color:transparent}
 
   .dayhead{text-align:center; align-self:end; padding-bottom:4px}
   .dayhead .dname{
@@ -275,6 +295,9 @@
   }
   .daycard h3 .ddate{color:var(--ink)}
   .daycard h3 .ledigbox{margin-top:0; margin-left:auto}
+  .daycard.weekend{background:#fafbfc}
+  .daycard.weekend h3{margin-bottom:5px}
+  .daycard.weekend .nnotes{margin-top:0}
 
   .nrow{
     display:grid; grid-template-columns:62px 1fr; gap:8px;
@@ -351,7 +374,14 @@
     .cell, .cell.tinted, .cell.neutral, .cell.note{
       -webkit-print-color-adjust:exact; print-color-adjust:exact;
     }
-    .grid.wide{grid-template-columns:minmax(46px,64px) repeat(5,minmax(0,1fr))}
+    .grid.wide{
+      grid-template-columns:minmax(46px,64px) repeat(5,minmax(0,1fr)) minmax(0,0.8fr);
+    }
+    .weekendcol{gap:6pt}
+    .weekendday{padding:6pt 8pt; gap:4pt; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .weekendhead .dname{font-size:8pt}
+    .weekendhead .ddate{font-size:9pt}
+    .weekendday .cell.note{font-size:9pt; padding:5pt 7pt}
     .dayhead .dname{font-size:9pt}
     .dayhead .ddate{font-size:10pt}
     .rowlabel{font-size:11pt}
@@ -430,7 +460,11 @@
 
   var STORAGE_KEY = "veckoschema.v1";
 
-  var DAYS = ["Måndag","Tisdag","Onsdag","Torsdag","Fredag"];
+  // Lördag och söndag har bara noteringar, och ligger staplade i en egen
+  // kolumn i liggande läge så vardagarna behåller sin bredd.
+  var DAYS = ["Måndag","Tisdag","Onsdag","Torsdag","Fredag","Lördag","Söndag"];
+  var WEEKDAYS = 5;
+  var DAY_COUNT = DAYS.length;
   var MONTHS = ["jan","feb","mars","apr","maj","juni","juli","aug","sep","okt","nov","dec"];
 
   var TONES = {
@@ -513,7 +547,9 @@
   }
 
   function emptyDays(){
-    return [emptyDay(), emptyDay(), emptyDay(), emptyDay(), emptyDay()];
+    var out = [];
+    for(var i = 0; i < DAY_COUNT; i++) out.push(emptyDay());
+    return out;
   }
 
   function isDayEmpty(d){
@@ -622,7 +658,9 @@
       {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"Inte idrott – Hampus ska vara i klassrummet med Eva-Marie", note2:""},
       {morning:false, drop:{person:"mamma", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
       {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:true,  pickup:{person:"mamma", time:"14.30"}, note:"", note2:""},
-      {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.00"}, note:"", note2:""}
+      {morning:false, drop:{person:"pappa", time:"8.00"}, fritids:false, pickup:{person:"pappa", time:"13.00"}, note:"", note2:""},
+      emptyDay(),                                            // lördag
+      emptyDay()                                             // söndag
     ];
   }
 
@@ -662,7 +700,9 @@
 
     Object.keys(s.weeks).forEach(function(k){
       var days = s.weeks[k];
-      if(!Array.isArray(days) || days.length !== 5){ delete s.weeks[k]; return; }
+      if(!Array.isArray(days) || days.length < WEEKDAYS){ delete s.weeks[k]; return; }
+      while(days.length < DAY_COUNT) days.push(emptyDay());   // helgen tillkom senare
+      days.length = DAY_COUNT;
       days.forEach(function(day){
         day.ledig = !!day.ledig;
         NOTE_KEYS.forEach(function(n){
@@ -819,12 +859,14 @@
     ctx.fillText(String(state.year), pillX + 248, pillY + 51);
 
     var gap = 14, labelW = 168;
-    var colW = (contentW - labelW - gap * 5) / 5;
+    var weekendW = Math.round((contentW - labelW) * 0.15);
+    var colW = (contentW - labelW - weekendW - gap * 6) / WEEKDAYS;
     function colX(i){ return M + labelW + gap + i * (colW + gap); }
+    var weekendX = M + labelW + gap + WEEKDAYS * (colW + gap);
 
     var headY = M + 150;
     ctx.textAlign = "center";
-    DAYS.forEach(function(day, i){
+    DAYS.slice(0, WEEKDAYS).forEach(function(day, i){
       var cx = colX(i) + colW / 2;
       ctx.fillStyle = "#6b7280";
       ctx.font = font("bold", 22);
@@ -840,7 +882,8 @@
     // istället för att lämna en tredjedel tom.
     var noteRows = [];
     NOTE_KEYS.forEach(function(key){
-      var h = noteHeight(ctx, days, key, colW);
+      // bara vardagarnas noteringar styr radhöjden; helgen har egen kolumn
+      var h = noteHeight(ctx, days.slice(0, WEEKDAYS), key, colW);
       if(h) noteRows.push({key:key, h:h});
     });
     var notesTotal = noteRows.reduce(function(sum, n){ return sum + n.h + gap; }, 0);
@@ -864,7 +907,7 @@
       }
     });
 
-    DAYS.forEach(function(day, i){
+    DAYS.slice(0, WEEKDAYS).forEach(function(day, i){
       var x = colX(i);
       if(days[i].ledig){
         var h = rowH * 4 + gap * 3;
@@ -891,11 +934,44 @@
         ctx.font = font("bold", 26);
         ctx.fillText("Notering", M, y + 40);
       }
-      DAYS.forEach(function(day, i){
+      DAYS.slice(0, WEEKDAYS).forEach(function(day, i){
         drawNote(ctx, colX(i), y, colW, n.h, days[i][n.key]);
       });
       y += n.h + gap;
     });
+
+    // Helgkolumnen, lördag över söndag, lika hög som resten av rutnätet
+    var gridBottom = noteRows.length ? y - gap : rowY(4) - gap;
+    var boxH = (gridBottom - headY - gap) / 2;
+    for(var w = WEEKDAYS; w < DAY_COUNT; w++){
+      var boxY = headY + (w - WEEKDAYS) * (boxH + gap);
+      ctx.fillStyle = "#fafbfc";
+      roundRect(ctx, weekendX, boxY, weekendW, boxH, 14);
+      ctx.fill();
+      ctx.strokeStyle = "#e9ecf1";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#6b7280";
+      ctx.font = font("bold", 20);
+      ctx.fillText(DAYS[w].toUpperCase(), weekendX + 18, boxY + 34);
+      ctx.fillStyle = "#111827";
+      ctx.font = font("bold", 23);
+      ctx.fillText(formatDate(dateForDay(w)), weekendX + 18, boxY + 64);
+
+      var ty = boxY + 100;
+      ctx.fillStyle = "#b45309";
+      ctx.font = font("bold", 22);
+      NOTE_KEYS.forEach(function(key){
+        if(!days[w][key]) return;
+        wrapLines(ctx, days[w][key], weekendW - 36).forEach(function(line){
+          ctx.fillText(line, weekendX + 18, ty);
+          ty += 28;
+        });
+        ty += 10;
+      });
+    }
 
     var stamp = (state.changes || {})[weekKey(state.week, state.year)];
     if(stamp && stamp.at){
@@ -1441,7 +1517,7 @@
 
     place(el("div"), "1", "1");                        // tomma hörnet
 
-    DAYS.forEach(function(day, i){
+    DAYS.slice(0, WEEKDAYS).forEach(function(day, i){
       var head = el("div", "dayhead");
       head.appendChild(el("span", "dname", day));
       head.appendChild(el("span", "ddate", formatDate(dateForDay(i))));
@@ -1454,7 +1530,23 @@
       place(label, String(r + 2), "1");
     });
 
-    DAYS.forEach(function(day, i){
+    // Helgen: en egen kolumn där lördag och söndag ligger på varandra
+    var weekend = el("div", "weekendcol");
+    for(var w = WEEKDAYS; w < DAY_COUNT; w++){
+      (function(i){
+        var box = el("div", "weekendday");
+        var head = el("div", "weekendhead");
+        head.appendChild(el("span", "dname", DAYS[i]));
+        head.appendChild(el("span", "ddate", formatDate(dateForDay(i))));
+        box.appendChild(head);
+        box.appendChild(buildNote(i, "note"));
+        if(days[i].note || days[i].note2) box.appendChild(buildNote(i, "note2"));
+        weekend.appendChild(box);
+      })(w);
+    }
+    place(weekend, "1 / span " + (ROWS.length + 1), String(WEEKDAYS + 2));
+
+    DAYS.slice(0, WEEKDAYS).forEach(function(day, i){
       var col = String(i + 2);
 
       if(days[i].ledig){
@@ -1483,11 +1575,23 @@
     DAYS.forEach(function(day, i){
       var card = el("div", "daycard");
 
+      var helg = (i >= WEEKDAYS);
+      if(helg) card.className = "daycard weekend";
+
       var h3 = el("h3");
       h3.appendChild(document.createTextNode(day + " "));
       h3.appendChild(el("span", "ddate", formatDate(dateForDay(i))));
-      h3.appendChild(ledigToggle(i));
+      if(!helg) h3.appendChild(ledigToggle(i));
       card.appendChild(h3);
+
+      if(helg){
+        var hnotes = el("div", "nnotes");
+        hnotes.appendChild(buildNote(i, "note"));
+        if(days[i].note || days[i].note2) hnotes.appendChild(buildNote(i, "note2"));
+        card.appendChild(hnotes);
+        wrap.appendChild(card);
+        return;
+      }
 
       if(days[i].ledig){
         card.appendChild(el("div", "cell ledig", "Ledig"));
